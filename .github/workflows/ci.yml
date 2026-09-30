@@ -52,4 +52,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "Netscope ${GITHUB_REF_NAME#v}" --generate-notes
-          gh release upload "$GITHUB_REF_NAME" dist/*.dmg --clobber
+          # Never replace a DMG that's already on the release: the Homebrew cask pins its sha256.
+          if gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | grep -qx 'Netscope-mac-arm64.dmg'; then
+            echo "DMG already attached; leaving it alone."
+          else
+            gh release upload "$GITHUB_REF_NAME" dist/Netscope-mac-arm64.dmg
+          fi
