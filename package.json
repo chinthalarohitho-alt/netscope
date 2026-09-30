@@ -1,0 +1,47 @@
+{
+  "name": "netscope",
+  "productName": "Netscope",
+  "version": "1.1.0",
+  "description": "Live network inspector for Android apps over adb: OkHttp logcat traffic, Chrome and WebView tabs, raw logs, Wi-Fi pairing.",
+  "author": "chinthalarohitho-alt <chinthalarohitho@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/chinthalarohitho-alt/netscope",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "serve": "node server.js",
+    "test": "node --test test/",
+    "site": "node site/build.js",
+    "dist": "electron-builder --mac dmg --arm64"
+  },
+  "build": {
+    "appId": "io.github.chinthalarohitho-alt.netscope",
+    "productName": "Netscope",
+    "files": [
+      "main.js",
+      "server.js",
+      "index.html",
+      "features.js",
+      "client.js"
+    ],
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.developer-tools",
+      "icon": "build/icon.png",
+      "identity": null,
+      "artifactName": "Netscope-mac-${arch}.${ext}"
+    },
+    "dmg": {
+      "title": "Netscope",
+      "artifactName": "Netscope-mac-${arch}.${ext}"
+    }
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  }
+}

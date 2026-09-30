@@ -1,0 +1,2141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Netscope</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --surface: #ffffff; --surface-2: #f0f2f5; --raised: #ffffff;
+    --line: #e4e7ec; --line-soft: #eef0f3;
+    --text: #0f172a; --text-2: #475569; --muted: #8a94a6;
+    --accent: #3b5bdb; --accent-soft: rgba(59, 91, 219, .10); --accent-text: #2f4bc4;
+    --sel: rgba(59, 91, 219, .09); --hover: rgba(15, 23, 42, .035);
+    --ok: #12a150; --ok-soft: rgba(18, 161, 80, .12);
+    --warn: #c27803; --warn-soft: rgba(194, 120, 3, .13);
+    --err: #e5484d; --err-soft: rgba(229, 72, 77, .12);
+    --info: #7c5cff; --info-soft: rgba(124, 92, 255, .12);
+    --neutral-soft: rgba(100, 116, 139, .12);
+    --m-get: #0e9f6e; --m-post: #3b5bdb; --m-put: #c27803; --m-patch: #a855f7; --m-delete: #e5484d;
+    --j-str: #0b6e4f; --j-num: #2f4bc4; --j-bool: #a14fd8; --j-key: #b45309; --j-null: #8a94a6;
+    --shadow: 0 1px 2px rgba(15, 23, 42, .05), 0 4px 16px rgba(15, 23, 42, .05);
+    --radius: 10px;
+    --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b0d12; --surface: #11141b; --surface-2: #171b24; --raised: #1a1f2a;
+      --line: #232936; --line-soft: #1b202b;
+      --text: #e7eaf0; --text-2: #aab2c0; --muted: #6b7486;
+      --accent: #7c95ff; --accent-soft: rgba(124, 149, 255, .14); --accent-text: #9aaeff;
+      --sel: rgba(124, 149, 255, .12); --hover: rgba(255, 255, 255, .03);
+      --ok: #3ddc84; --ok-soft: rgba(61, 220, 132, .13);
+      --warn: #f5b93d; --warn-soft: rgba(245, 185, 61, .14);
+      --err: #ff6b6f; --err-soft: rgba(255, 107, 111, .14);
+      --info: #a78bfa; --info-soft: rgba(167, 139, 250, .15);
+      --neutral-soft: rgba(148, 163, 184, .13);
+      --m-get: #3ddc84; --m-post: #7c95ff; --m-put: #f5b93d; --m-patch: #c084fc; --m-delete: #ff6b6f;
+      --j-str: #7ee2b8; --j-num: #9aaeff; --j-bool: #d8a8ff; --j-key: #ffb86b; --j-null: #6b7486;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 13px/1.5 var(--sans); display: flex; flex-direction: column; -webkit-font-smoothing: antialiased; overflow: hidden; }
+  button { font: inherit; color: inherit; }
+  svg { display: block; }
+
+  /* slim scrollbars */
+  * { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); background-clip: content-box; border: 3px solid transparent; }
+  ::-webkit-scrollbar-corner { background: transparent; }
+
+  /* ---------- top bar ---------- */
+  .topbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--line); -webkit-app-region: drag; flex-wrap: wrap; }
+  .electron .topbar { padding-left: 84px; }
+  .topbar > * { -webkit-app-region: no-drag; }
+  .brand { display: flex; align-items: center; gap: 9px; margin-right: 4px; -webkit-app-region: drag; }
+  .logo { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(160deg, #4b6bff, #1f2f8a); display: grid; place-items: center; box-shadow: 0 2px 8px rgba(59, 91, 219, .35); }
+  .brand b { font-size: 14px; font-weight: 650; letter-spacing: -.01em; }
+  .iconbtn { height: 32px; min-width: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; color: var(--text-2); transition: background .12s, border-color .12s, color .12s; }
+  .iconbtn:hover { color: var(--text); border-color: var(--muted); }
+  #rec .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--err); box-shadow: 0 0 0 3px var(--err-soft); animation: pulse 2s infinite; }
+  #rec.paused .dot { background: var(--muted); box-shadow: none; animation: none; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 5px transparent; } }
+  .search { flex: 1 1 260px; min-width: 180px; position: relative; }
+  .qsug { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 30; background: var(--raised); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 40px rgba(0, 0, 0, .28); padding: 6px; display: none; max-height: 360px; overflow: auto; }
+  .qsug.open { display: block; }
+  .qs { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; color: var(--text); text-align: left; padding: 7px 10px; border-radius: 8px; cursor: pointer; font: 12.5px var(--sans); }
+  .qs:hover, .qs.kb { background: var(--hover); }
+  .qs code { font: 600 12px var(--mono); color: var(--accent-text); white-space: nowrap; }
+  .qs .d { color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .qs .cnt { font: 11.5px var(--mono); color: var(--muted); background: var(--surface-2); border-radius: 6px; padding: 2px 7px; }
+  .qs-head { padding: 6px 10px 4px; font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .qs-tip { padding: 6px 10px 4px; font-size: 11.5px; color: var(--muted); border-top: 1px solid var(--line-soft); margin-top: 4px; }
+  .qs-tip code { font: 11.5px var(--mono); color: var(--text-2); }
+  #filter.bad { border-color: var(--warn); }
+  .c-ty { width: 92px; }
+  td.c-ty { font: 12px var(--mono); color: var(--text-2); }
+  .search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  #filter { width: 100%; height: 32px; font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 0 30px 0 32px; outline: none; transition: border-color .12s, box-shadow .12s; }
+  #filter:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  #filter::placeholder { color: var(--muted); }
+  .kbd { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font: 11px var(--sans); color: var(--muted); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; pointer-events: none; }
+
+  .dd { position: relative; }
+  .dd-btn { height: 32px; display: inline-flex; align-items: center; gap: 8px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); cursor: pointer; max-width: 260px; transition: border-color .12s, box-shadow .12s; }
+  .dd-btn:hover { border-color: var(--muted); }
+  .dd.open .dd-btn, .dd-btn:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); outline: none; }
+  .dd-btn .ico { color: var(--muted); flex: none; }
+  .dd-btn .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+  .dd-btn .chev { color: var(--muted); flex: none; transition: transform .15s; }
+  .dd.open .dd-btn .chev { transform: rotate(180deg); }
+  .dd-menu { position: absolute; top: calc(100% + 6px); left: 0; min-width: 300px; z-index: 20; background: var(--raised); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 40px rgba(0, 0, 0, .28), 0 2px 6px rgba(0, 0, 0, .12); padding: 6px; opacity: 0; transform: translateY(-4px) scale(.98); transform-origin: top left; pointer-events: none; transition: opacity .12s, transform .12s; }
+  .dd.open .dd-menu { opacity: 1; transform: none; pointer-events: auto; }
+  .dd-head { padding: 6px 10px 4px; font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .dd-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; cursor: pointer; text-align: left; color: var(--text); }
+  .dd-item:hover, .dd-item.kb { background: var(--hover); }
+  .dd-item.on { background: var(--accent-soft); }
+  .dd-item .av { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; flex: none; position: relative; background: var(--surface-2); color: var(--text-2); border: 1px solid var(--line-soft); }
+  .dd-item .av .st { position: absolute; right: -2px; bottom: -2px; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--raised); background: var(--muted); }
+  .dd-item .av .st.on { background: var(--ok); }
+  .dd-item .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+  .dd-item .tx b { font-weight: 500; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dd-item .tx small { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dd-item .cnt { font: 11.5px var(--mono); color: var(--muted); background: var(--surface-2); border-radius: 6px; padding: 2px 7px; font-variant-numeric: tabular-nums; }
+  .dd-item .ck { width: 16px; color: var(--accent-text); flex: none; visibility: hidden; }
+  .dd-item.on .ck { visibility: visible; }
+  .dd-sep { height: 1px; background: var(--line-soft); margin: 4px 6px; }
+  .dd-btn.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text); }
+  .dd-btn.active .ico { color: var(--accent-text); }
+  .dd-btn .clr { display: none; width: 18px; height: 18px; border-radius: 5px; place-items: center; color: var(--accent-text); margin-right: -4px; }
+  .dd-btn.active .clr { display: grid; }
+  .dd-btn.active .chev { display: none; }
+  .dd-btn .clr:hover { background: var(--accent-soft); }
+  .dd-menu.wide { width: min(560px, calc(100vw - 40px)); }
+  .dd-search { position: relative; margin: 2px 2px 6px; }
+  .dd-search svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .dd-search input { width: 100%; height: 32px; font: inherit; font-size: 12.5px; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 0 10px 0 30px; outline: none; }
+  .dd-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .dd-list { max-height: min(420px, 60vh); overflow: auto; }
+  .dd-item .rm { width: 52px; flex: none; font: 700 10.5px/1 var(--mono); }
+  .dd-item .rt { flex: 1; min-width: 0; font: 12px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dd-item .rt .p { color: var(--muted); }
+  .dd-item .cnt.err { color: var(--err); background: var(--err-soft); }
+  .view-seg button { height: 26px; }
+  /* header filters: the dropdowns live in #filterHost and open as popovers under a column's funnel */
+  #filterHost .dd { position: fixed; z-index: 50; }
+  #filterHost .dd > .dd-btn { display: none; }
+  #filterHost .dd-menu { top: 0; }
+  .th { display: inline-flex; align-items: center; gap: 4px; }
+  .fbtn { width: 20px; height: 20px; border: 0; padding: 0; background: transparent; border-radius: 5px; color: var(--muted); display: inline-grid; place-items: center; cursor: pointer; opacity: .55; transition: opacity .1s, background .1s, color .1s; }
+  th:hover .fbtn, .fbtn.open { opacity: 1; }
+  .fbtn:hover, .fbtn.open { background: var(--hover); color: var(--text); }
+  .fbtn.active { opacity: 1; color: var(--accent-text); background: var(--accent-soft); }
+  .fbtn.active svg path { fill: currentColor; }
+  .rawbar .dd-menu { right: auto; }
+  .raw-mode #listCard, .raw-mode #split, .raw-mode #detail { display: none !important; }
+  #rawCard { display: none; flex: 1; min-width: 0; flex-direction: column; }
+  .raw-mode #rawCard { display: flex; }
+  .rawbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .rawbar .ttl { font-weight: 600; }
+  .rawbar .muted { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .rawbar .grow { flex: 1; }
+  .iconbtn.on { color: var(--accent-text); border-color: var(--accent); background: var(--accent-soft); }
+  #rawList { flex: 1; overflow: auto; font: 12px/1.55 var(--mono); padding: 4px 0; }
+  .rl { display: flex; gap: 10px; padding: 1px 12px; white-space: nowrap; cursor: default; }
+  .rl:hover { background: var(--hover); }
+  .rl > span { flex: none; }
+  .rl .t { color: var(--muted); }
+  .rl .sw { align-self: flex-start; margin-top: 6px; }
+  .rl .lv { width: 12px; text-align: center; font-weight: 700; color: var(--muted); }
+  .rl .tg { width: 170px; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); }
+  .rl .ap { width: 150px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+  .rl .m { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+  .wrap .rl, .rl.rl-open { white-space: pre-wrap; }
+  .wrap .rl .m, .rl.rl-open .m { word-break: break-all; }
+  .rl.lv-E .lv, .rl.lv-E .m, .rl.lv-F .m { color: var(--err); }
+  .rl.lv-W .lv, .rl.lv-W .m { color: var(--warn); }
+  .rl.lv-D .m, .rl.lv-V .m { color: var(--text-2); }
+  .rl.k-req .m { color: var(--accent-text); font-weight: 600; }
+  .rl.k-ok .m { color: var(--ok); font-weight: 600; }
+  .rl.k-bad .m { color: var(--err); font-weight: 600; }
+  .rl.k-end .m { color: var(--muted); }
+  #pane .rawbox { background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 9px; padding: 6px 0; overflow: auto; font: 12px/1.55 var(--mono); }
+  #pane .rawbox .rl { white-space: pre-wrap; }
+  #pane .rawbox .rl .m { word-break: break-all; }
+  .dd-empty { padding: 16px 10px; text-align: center; color: var(--muted); font-size: 12.5px; }
+
+  .segs { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; padding: 2px; gap: 2px; }
+  .segs button { border: 0; background: transparent; height: 26px; padding: 0 10px; border-radius: 7px; cursor: pointer; color: var(--text-2); display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; }
+  .segs button:hover { color: var(--text); }
+  .segs button.on { background: var(--raised); color: var(--text); box-shadow: var(--shadow); }
+  .segs .n { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .segs button.on .n { color: var(--text-2); }
+
+  .conn { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 11px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text-2); font-size: 12px; white-space: nowrap; }
+  .conn i { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
+  .conn.ok i { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
+  .conn.bad i { background: var(--err); box-shadow: 0 0 0 3px var(--err-soft); }
+
+  /* ---------- layout ---------- */
+  main { flex: 1; display: flex; min-height: 0; padding: 12px; gap: 0; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); min-height: 0; overflow: hidden; }
+  #listCard { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  #list { flex: 1; overflow: auto; }
+
+  table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+  thead th { position: sticky; top: 0; z-index: 1; background: var(--surface); text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); padding: 9px 12px; white-space: nowrap; }
+  tbody td { padding: 0 12px; height: 38px; border-bottom: 1px solid var(--line-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+  tbody tr { cursor: pointer; transition: background .08s; }
+  tbody tr:hover { background: var(--hover); }
+  tbody tr.sel { background: var(--sel); box-shadow: inset 3px 0 0 var(--accent); }
+  .c-st { width: 88px; } .c-m { width: 100px; } .c-d { width: 170px; } .c-a { width: 180px; } .c-t { width: 88px; } .c-s { width: 96px; } .c-at { width: 124px; }
+  th.c-s, td.c-s, th.c-t { text-align: right; }
+  .hide-dev .c-d { display: none; }
+  .hide-app .c-a { display: none; }
+  .hide-at .c-at { display: none; }
+  .hide-ty .c-ty { display: none; }
+  .hide-sz .c-s { display: none; }
+  .squeeze-app .c-a, .squeeze-dev .c-d { display: none; }
+  td.c-a { font-size: 12px; color: var(--text-2); }
+
+  .pill { display: inline-flex; align-items: center; gap: 5px; height: 21px; padding: 0 8px; border-radius: 6px; font: 600 11.5px/1 var(--sans); font-variant-numeric: tabular-nums; }
+  .pill.s2 { color: var(--ok); background: var(--ok-soft); }
+  .pill.s3 { color: var(--info); background: var(--info-soft); }
+  .pill.s4 { color: var(--warn); background: var(--warn-soft); }
+  .pill.s5, .pill.sF { color: var(--err); background: var(--err-soft); }
+  .pill.sP { color: var(--text-2); background: var(--neutral-soft); }
+  .spin { width: 9px; height: 9px; border-radius: 50%; border: 1.6px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .method { font: 700 11px/1 var(--mono); letter-spacing: .02em; }
+  .m-GET { color: var(--m-get); } .m-POST { color: var(--m-post); } .m-PUT { color: var(--m-put); } .m-PATCH { color: var(--m-patch); } .m-DELETE { color: var(--m-delete); }
+  .path { font: 12.5px var(--mono); color: var(--text); }
+  .path .q { color: var(--muted); }
+  tr.bad .path { color: var(--err); }
+  .dev { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); max-width: 100%; overflow: hidden; }
+  .sw { width: 8px; height: 8px; border-radius: 3px; flex: none; display: inline-block; }
+  .timing { display: flex; align-items: center; gap: 8px; justify-content: flex-end; font: 12px var(--mono); color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .timing.slow { color: var(--warn); } .timing.vslow { color: var(--err); }
+  .bar { width: 54px; height: 5px; border-radius: 3px; background: var(--line-soft); overflow: hidden; flex: none; }
+  .bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+  .bar i.slow { background: var(--warn); } .bar i.vslow { background: var(--err); }
+  td.c-s, td.c-at { font: 12px var(--mono); color: var(--text-2); font-variant-numeric: tabular-nums; }
+  td.c-at { color: var(--muted); }
+  .warnmark { color: var(--warn); }
+
+  .empty { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--muted); padding: 40px; text-align: center; }
+  .empty .ring { width: 54px; height: 54px; border-radius: 16px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
+  .empty b { color: var(--text); font-size: 14px; font-weight: 600; }
+
+  .stats { display: flex; gap: 16px; padding: 8px 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .stats b { color: var(--text-2); font-weight: 600; }
+  .stats .errs b { color: var(--err); }
+
+  /* ---------- splitter + detail ---------- */
+  #split { display: none; flex: 0 0 12px; cursor: col-resize; position: relative; }
+  #split::after { content: ""; position: absolute; left: 50%; top: 50%; width: 4px; height: 36px; border-radius: 4px; background: var(--line); transform: translate(-50%, -50%); transition: background .12s, height .12s; }
+  #split:hover::after, #split.drag::after { background: var(--accent); height: 64px; }
+  #split.open { display: block; }
+  body.resizing { cursor: col-resize; user-select: none; }
+  body.resizing .topbar, body.resizing .topbar * { -webkit-app-region: no-drag; }
+  body.resizing #list, body.resizing #detail { pointer-events: none; }
+
+  #detail { width: 50%; min-width: 320px; display: none; flex-direction: column; }
+  #detail.open { display: flex; }
+  .dhead { padding: 14px 16px 0; border-bottom: 1px solid var(--line); }
+  .dtitle { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .dtitle .path { font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+  .x { width: 28px; height: 28px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center; flex: none; }
+  .x:hover { background: var(--surface-2); color: var(--text); }
+  .dmeta { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0 10px; color: var(--muted); font-size: 12px; }
+  .dmeta span { display: inline-flex; align-items: center; gap: 5px; }
+  .dmeta b { color: var(--text-2); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .drow { display: flex; align-items: flex-end; gap: 8px; }
+  .tabs { display: flex; gap: 2px; flex: 1; }
+  .tab { border: 0; background: none; padding: 8px 11px 9px; font-size: 12.5px; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; cursor: pointer; margin-bottom: -1px; }
+  .tab:hover { color: var(--text); }
+  .tab.on { color: var(--accent-text); border-bottom-color: var(--accent); }
+  .acts { display: flex; gap: 6px; padding-bottom: 7px; }
+  .acts .iconbtn { height: 28px; font-size: 12px; padding: 0 9px; }
+  .acts .iconbtn svg { flex: none; }
+  .acts .iconbtn .lbl { white-space: nowrap; }
+  #detail { container-type: inline-size; }
+  @container (max-width: 820px) { .acts .iconbtn .lbl { display: none; } .acts .iconbtn { padding: 0 8px; } }
+  #pane { flex: 1; overflow: auto; padding: 14px 16px 28px; }
+
+  .sec { background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 9px; margin-bottom: 12px; overflow: hidden; }
+  .sec > h3 { margin: 0; padding: 9px 12px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; }
+  .sec > h3 .n { font-weight: 500; }
+  .sec > .body { padding: 2px 12px 11px; }
+  .kv { display: grid; grid-template-columns: minmax(130px, max-content) 1fr; gap: 5px 16px; font: 12px/1.55 var(--mono); }
+  .kv .k { color: var(--muted); }
+  .kv .v { color: var(--text); word-break: break-all; }
+  .reveal { cursor: pointer; color: var(--accent-text); border-bottom: 1px dashed currentColor; }
+  pre { margin: 0; font: 12px/1.6 var(--mono); white-space: pre-wrap; word-break: break-all; color: var(--text); }
+  .note { color: var(--muted); font-size: 12.5px; }
+  .banner { display: flex; gap: 8px; align-items: flex-start; padding: 9px 12px; border-radius: 8px; margin-bottom: 12px; font-size: 12.5px; }
+  .banner.warn { background: var(--warn-soft); color: var(--warn); }
+  .banner.err { background: var(--err-soft); color: var(--err); font-family: var(--mono); font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+  .code { background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 9px; padding: 12px; }
+
+  .jt { font: 12px/1.7 var(--mono); }
+  .jt details { padding-left: 16px; }
+  .jt details > summary { margin-left: -16px; cursor: pointer; list-style: none; border-radius: 4px; }
+  .jt details > summary::-webkit-details-marker { display: none; }
+  .jt details > summary::before { content: ""; display: inline-block; width: 16px; height: 10px; vertical-align: -1px; background: var(--muted); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 10'%3E%3Cpath d='M5 2l4 3-4 3z'/%3E%3C/svg%3E") no-repeat left center; transition: transform .1s; transform-origin: 5px 5px; }
+  .jt details[open] > summary::before { transform: rotate(90deg); }
+  .jt summary:hover { background: var(--hover); }
+  .jt .row { padding-left: 16px; }
+  .jk { color: var(--j-key); } .js { color: var(--j-str); } .jn { color: var(--j-num); } .jb { color: var(--j-bool); } .jz { color: var(--j-null); }
+  .jt .sum { color: var(--muted); }
+
+  .modal { position: fixed; inset: 0; z-index: 100; display: none; place-items: center; background: rgba(5, 8, 15, .5); backdrop-filter: blur(4px); padding: 16px; }
+  .modal.open { display: grid; }
+  .sheet { width: min(600px, 100%); max-height: calc(100vh - 40px); overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 24px 80px rgba(0, 0, 0, .45); }
+  .sheet-h { display: flex; align-items: center; gap: 10px; padding: 16px 18px 0; }
+  .sheet-h h2 { margin: 0; font-size: 15px; font-weight: 650; flex: 1; }
+  .sheet .tabs { padding: 0 12px; border-bottom: 1px solid var(--line); margin-top: 10px; }
+  .sheet-b { padding: 18px; }
+  .pane-pair { display: none; }
+  .pane-pair.on { display: block; }
+  .qrwrap { display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: start; }
+  .qr { width: 220px; height: 220px; border-radius: 12px; background: #fff; padding: 10px; display: grid; place-items: center; }
+  .qr svg { width: 100%; height: 100%; }
+  .steps { margin: 0; padding-left: 18px; color: var(--text-2); font-size: 13px; line-height: 1.6; }
+  .steps li { margin-bottom: 6px; }
+  .steps b { color: var(--text); font-weight: 600; }
+  .pstat { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding: 9px 12px; border-radius: 9px; background: var(--surface-2); font-size: 12.5px; color: var(--text-2); }
+  .pstat i { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: none; animation: pulse 1.6s infinite; }
+  .pstat.ok { background: var(--ok-soft); color: var(--ok); } .pstat.ok i { background: var(--ok); animation: none; }
+  .pstat.err { background: var(--err-soft); color: var(--err); } .pstat.err i { background: var(--err); animation: none; }
+  .pstat.idle i { background: var(--muted); animation: none; }
+  .form { display: grid; gap: 12px; margin-top: 14px; }
+  .field { display: grid; gap: 5px; }
+  .field label { font-size: 12px; color: var(--text-2); font-weight: 500; }
+  .field label small { color: var(--muted); font-weight: 400; }
+  .field input { height: 36px; font: 13px var(--mono); color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 0 11px; outline: none; }
+  .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  #brRecipeSum { padding: 9px 12px; border-radius: 9px; background: var(--ok-soft); color: var(--text-2); line-height: 1.55; }
+  #brRecipeSum a { color: var(--accent-text); font-weight: 600; text-decoration: none; }
+  #brRecipeSum a:hover { text-decoration: underline; }
+  #brRecipeSum code { font: 11.5px var(--mono); color: var(--text); }
+  .field input::placeholder, .fx-ta::placeholder { color: var(--muted); opacity: .55; font-style: italic; }
+  .field input.need, .fx-ta.need { border-color: var(--err) !important; box-shadow: 0 0 0 3px var(--err-soft) !important; }
+  .field select { height: 36px; font: 13px var(--sans); color: var(--text); background-color: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 0 11px; outline: none; }
+  .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .bri[hidden] { display: none !important; }
+  .btn { height: 36px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; justify-self: start; }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .btn.ghost { background: transparent; color: var(--accent-text); }
+  .nearby { display: grid; gap: 8px; margin-top: 4px; }
+  .nb { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+  .nb .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .nb .tx b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nb .tx small { color: var(--muted); font: 11.5px var(--mono); }
+  .nb .ok { color: var(--ok); font-size: 12px; font-weight: 600; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 12px; }
+  .dd-foot { width: 100%; display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--accent-text); cursor: pointer; font-weight: 500; }
+  .dd-foot:hover { background: var(--accent-soft); }
+  @media (max-width: 560px) { .qrwrap { grid-template-columns: 1fr; } }
+  #toast { position: fixed; bottom: 22px; left: 50%; transform: translate(-50%, 8px); background: var(--raised); color: var(--text); border: 1px solid var(--line); box-shadow: var(--shadow); padding: 8px 14px; border-radius: 9px; opacity: 0; transition: opacity .15s, transform .15s; pointer-events: none; font-size: 12.5px; display: flex; gap: 8px; align-items: center; }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  #toast i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+
+  @media (max-width: 900px) {
+    main { flex-direction: column; padding: 8px; }
+    #detail { width: 100% !important; min-width: 0; height: 55%; margin-top: 8px; }
+    #split, #split.open { display: none; }
+    .c-at, .c-d { display: none; }
+    .conn { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 19V5M4 9l4-4 4 4" stroke="#fff"/><path d="M16 5v14M12 15l4 4 4-4" stroke="#9ef2c7"/></svg></div>
+    <b>Netscope</b>
+  </div>
+  <div class="segs view-seg" id="viewSeg">
+    <button data-view="requests" class="on">Requests</button>
+    <button data-view="raw">Raw logs</button>
+    <button data-view="client">API client</button>
+  </div>
+  <button class="iconbtn" id="rec" title="Pause recording"><span class="dot"></span></button>
+  <button class="iconbtn" id="clear" title="Clear (⌘K)">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>
+  </button>
+  <button class="iconbtn" id="openHar" title="Open a HAR session (⌘O) — or drop a .har on the window">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5V18a2 2 0 002 2h14a2 2 0 002-2V9.5a2 2 0 00-2-2h-7L10 5H5a2 2 0 00-2 2.5z"/></svg>
+  </button>
+  <button class="iconbtn" id="saveHar" title="Save the shown requests as HAR (⌘S)">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19h14"/></svg>
+  </button>
+  <div class="search">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input id="filter" placeholder="Filter…  e.g. mime:application/json  status:4xx  -domain:*.google.com" autocomplete="off" spellcheck="false">
+    <span class="kbd">/</span>
+    <div class="qsug" id="qsug" role="listbox"></div>
+  </div>
+  <button class="iconbtn" id="pairBtn" title="Connect a device over Wi-Fi"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 9a14 14 0 0119 0M5.5 12.5a9.5 9.5 0 0113 0M8.8 16a5 5 0 016.4 0"/><circle cx="12" cy="19.5" r="1.2" fill="currentColor"/></svg>Connect device</button>
+  <div class="conn" id="conn" title="Connected devices" style="cursor:pointer"><i></i><span>Connecting…</span></div>
+</header>
+
+<main>
+  <section class="card" id="listCard">
+    <div id="list">
+      <table id="table">
+        <thead><tr>
+          <th class="c-st"><span class="th">Status<button class="fbtn" data-f="status" title="Filter status"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3.5 5h17l-6.5 8v6l-4-2v-4z"/></svg></button></span></th><th class="c-m"><span class="th">Method<button class="fbtn" data-f="method" title="Filter method"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3.5 5h17l-6.5 8v6l-4-2v-4z"/></svg></button></span></th><th><span class="th">Path<button class="fbtn" data-f="route" title="Filter path"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3.5 5h17l-6.5 8v6l-4-2v-4z"/></svg></button></span></th><th class="c-ty"><span class="th">Type<button class="fbtn" data-f="mime" title="Filter type"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3.5 5h17l-6.5 8v6l-4-2v-4z"/></svg></button></span></th><th class="c-d"><span class="th">Device<button class="fbtn" data-f="device" title="Filter device"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3.5 5h17l-6.5 8v6l-4-2v-4z"/></svg></button></span></th><th class="c-a"><span class="th">App<button class="fbtn" data-f="app" title="Filter app"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3.5 5h17l-6.5 8v6l-4-2v-4z"/></svg></button></span></th>
+          <th class="c-t">Time</th><th class="c-wf">Waterfall</th><th class="c-s">Size</th><th class="c-at">Started</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty">
+      <div class="ring"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div>
+      <b id="emptyTitle">Waiting for requests</b>
+      <span id="emptyText">Open any app on a connected phone or emulator — calls logged by OkHttp’s HttpLoggingInterceptor show up here live.</span>
+    </div>
+    <div class="stats"><span><b id="sumCount">0</b> requests</span><span><b id="sumSize">0 B</b> transferred</span><span class="errs" id="sumFailWrap"><b id="sumFail">0</b> errors</span><span id="sumShown"></span></div>
+  </section>
+
+  <section class="card" id="rawCard">
+    <div class="rawbar">
+      <span class="ttl">Raw logs</span>
+      <span class="muted" id="rawCount"></span>
+      <span class="grow"></span>
+      <div class="segs" id="rawScope">
+        <button data-scope="all" class="on" title="Everything in logcat for the selected device/app">All logcat</button>
+        <button data-scope="http" title="Only the OkHttp request/response lines">HTTP only</button>
+      </div>
+      <button class="iconbtn" id="rawWrap" title="Wrap long lines">Wrap</button>
+      <button class="iconbtn" id="rawCopy" title="Copy the visible lines">Copy</button>
+    </div>
+    <div id="rawList"></div>
+    <div class="empty" id="rawEmpty">
+      <div class="ring"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h13"/></svg></div>
+      <b>No log lines yet</b>
+      <span>Lines from connected devices stream in here as they are written.</span>
+    </div>
+  </section>
+
+  <div id="split" title="Drag to resize · double-click to reset"></div>
+
+  <aside class="card" id="detail">
+    <div class="dhead">
+      <div class="dtitle">
+        <span id="dStatus"></span><span class="method" id="dMethod"></span><span class="path" id="dPath"></span>
+        <button class="x" id="close" title="Close (Esc)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="dmeta" id="dMeta"></div>
+      <div class="drow">
+        <div class="tabs">
+          <button class="tab on" data-tab="headers">Headers</button>
+          <button class="tab" data-tab="payload">Payload</button>
+          <button class="tab" data-tab="preview">Preview</button>
+          <button class="tab" data-tab="response">Response</button>
+          <button class="tab" data-tab="raw">Raw</button>
+        </div>
+        <div class="acts">
+          <button class="iconbtn" id="toClientBtn" title="Open in the API client to edit, save to a collection and send"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1h5"/></svg><span class="lbl">Open in client</span></button>
+          <button class="iconbtn" id="resendBtn" title="Edit & resend (R)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0113.7-5.7L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 01-13.7 5.7L4 15.5M4 20v-4.5h4.5"/></svg><span class="lbl">Resend</span></button>
+          <button class="iconbtn" id="cmpBtn" title="Pin this call, then select another to compare"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4v16M16 4v16M3 8h5M16 16h5"/></svg><span class="lbl">Compare</span></button>
+          <button class="iconbtn" id="curl" title="Copy as cURL"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-5-6-5M12 19h8"/></svg><span class="lbl">cURL</span></button>
+          <button class="iconbtn" id="copyResp" title="Copy response"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></svg><span class="lbl">Copy</span></button>
+        </div>
+      </div>
+    </div>
+    <div id="pane"></div>
+  </aside>
+</main>
+<div class="modal" id="pairModal" role="dialog" aria-modal="true" aria-labelledby="pairTitle">
+  <div class="sheet">
+    <div class="sheet-h">
+      <h2 id="pairTitle">Connect a device over Wi-Fi</h2>
+      <button class="x" id="pairClose" title="Close (Esc)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="tabs" id="pairTabs">
+      <button class="tab on" data-p="qr">Scan QR code</button>
+      <button class="tab" data-p="code">Pairing code</button>
+      <button class="tab" data-p="nearby">Nearby / reconnect</button>
+      <button class="tab" data-p="browser">Browser on this Mac</button>
+    </div>
+    <div class="sheet-b">
+      <div class="pane-pair on" data-p="qr">
+        <div class="qrwrap">
+          <div class="qr" id="qrBox"><span class="note">Generating…</span></div>
+          <div>
+            <ol class="steps">
+              <li>Put the phone and this Mac on the <b>same Wi-Fi</b>.</li>
+              <li>On the phone open <b>Settings → Developer options → Wireless debugging</b> and turn it on.</li>
+              <li>Tap <b>Pair device with QR code</b> and scan this code.</li>
+            </ol>
+            <button class="btn ghost" id="qrNew" style="margin-top:6px">New code</button>
+          </div>
+        </div>
+        <div class="pstat idle" id="qrStat"><i></i><span>Preparing…</span></div>
+      </div>
+      <div class="pane-pair" data-p="code">
+        <ol class="steps">
+          <li>On the phone: <b>Wireless debugging → Pair device with pairing code</b>.</li>
+          <li>Enter the <b>IP address &amp; Port</b> and the <b>6-digit code</b> it shows.</li>
+        </ol>
+        <div class="form">
+          <div class="field"><label for="pcTarget">IP address &amp; port <small>(from the pairing dialog)</small></label><input id="pcTarget" placeholder="192.168.1.20:37251" autocomplete="off" spellcheck="false"></div>
+          <div class="field"><label for="pcCode">Pairing code</label><input id="pcCode" placeholder="123456" inputmode="numeric" maxlength="6" autocomplete="off"></div>
+          <div class="field"><label for="pcConnect">Connect address <small>(optional — IP &amp; port on the main Wireless debugging screen; found automatically if blank)</small></label><input id="pcConnect" placeholder="192.168.1.20:41573" autocomplete="off" spellcheck="false"></div>
+          <button class="btn" id="pcGo">Pair &amp; connect</button>
+        </div>
+        <div class="pstat idle" id="pcStat" style="display:none"><i></i><span></span></div>
+      </div>
+      <div class="pane-pair" data-p="browser">
+        <div class="nearby" id="brList"><div class="note">Looking for browsers…</div></div>
+        <div class="form">
+          <div class="field"><label for="brUrl">Open this address <small>(optional)</small></label><input id="brUrl" placeholder="https://example.com" autocomplete="off" spellcheck="false"></div>
+          <div class="field">
+            <label for="brPreset">Sign in with a token <small>(optional — opens the site already logged in)</small></label>
+            <select id="brPreset">
+              <option value="none">Don't sign in</option>
+              <option value="storage">Cookie + storage — for web apps that keep the token in the browser</option>
+              <option value="bearer">Bearer header — Authorization on one host</option>
+              <option value="header">Custom header — your header name on one host</option>
+            </select>
+          </div>
+          <div id="brInject" style="display:none" class="form" >
+            <div class="field">
+              <label for="brToken">Token <small>(not saved)</small></label>
+              <div style="display:flex;gap:8px">
+                <input id="brToken" type="password" placeholder="eyJhbGciOi…" autocomplete="off" spellcheck="false" style="flex:1">
+                <button class="iconbtn" id="brTokenShow" type="button" title="Show / hide">Show</button>
+                <button class="iconbtn" id="brFromCall" type="button" title="Use the token (and headers) of the most recent captured request that carries a Bearer token">From a captured call</button>
+              </div>
+              <div class="hint" id="brClaims" style="margin-top:6px;display:none"></div>
+              <div class="hint" id="brPicked" style="margin-top:6px;display:none"></div>
+            </div>
+            <div class="hint" id="brRecipeSum" style="display:none;margin:0"></div>
+            <div id="brRecipeBox" class="form" style="margin-top:0">
+            <div class="bri" data-for="storage" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="field"><label for="brCookie">Cookie name <small>(blank = no cookie)</small></label><input id="brCookie" placeholder="e.g. auth_token" autocomplete="off" spellcheck="false"></div>
+              <div class="field"><label for="brKey">localStorage key <small>(blank = none)</small></label><input id="brKey" placeholder="e.g. auth_token" autocomplete="off" spellcheck="false"></div>
+            </div>
+            <div class="bri" data-for="storage" style="margin-top:-4px">
+              <button class="iconbtn" id="brDetect" type="button" style="height:28px;font-size:12px" title="Sign in to the site once in Netscope's browser, then click this to find where it keeps the token">Detect from a signed-in tab</button>
+            </div>
+            <div class="bri field" data-for="storage">
+              <label for="brExtra">Extra values <small>(optional — one <code>key = value</code> per line; <code>{{jwt:claim}}</code> reads a claim from the token, <code>{{header:name}}</code> a header of the captured call)</small></label>
+              <textarea id="brExtra" class="fx-ta" style="min-height:70px" spellcheck="false" placeholder="e.g.&#10;org_id = {{jwt:tenant_id}}&#10;branch_id = {{jwt:sub_org_id}}"></textarea>
+              <label style="display:flex;gap:6px;align-items:center;font-size:12px;color:var(--text-2);margin-top:4px"><input type="checkbox" id="brSession"> Also write the extra values to sessionStorage</label>
+            </div>
+            <div class="bri field" data-for="header"><label for="brHeader">Header name</label><input id="brHeader" placeholder="e.g. X-Auth-Token" autocomplete="off" spellcheck="false"></div>
+            <div class="bri field" data-for="bearer header"><label for="brHost">Only for host <small>(the token is added to requests to this host only)</small></label><input id="brHost" placeholder="e.g. api.example.com" autocomplete="off" spellcheck="false"></div>
+            </div>
+          </div>
+        </div>
+        <div class="nearby" id="brRunning" style="margin-top:14px"></div>
+        <div class="form">
+          <div class="field"><label for="brPort">Or attach to a port <small>(any Chromium browser or Electron app started with <code>--remote-debugging-port</code>)</small></label><input id="brPort" placeholder="9222" inputmode="numeric" autocomplete="off"></div>
+          <button class="btn" id="brAttach">Attach</button>
+        </div>
+        <div class="pstat idle" id="brStat" style="display:none"><i></i><span></span></div>
+        <div class="hint">Netscope opens the browser with its own profile (Chrome doesn't allow capture on your everyday profile), so your normal browser isn't touched. Sign in to sites there once — it remembers you. Every tab is captured, including new ones, with headers, bodies and timing.</div>
+      </div>
+      <div class="pane-pair" data-p="nearby">
+        <div class="nearby" id="nbList"><div class="note">Looking for devices…</div></div>
+        <div class="form">
+          <div class="field"><label for="nbTarget">Or connect by address <small>(IP &amp; port on the main Wireless debugging screen)</small></label><input id="nbTarget" placeholder="192.168.1.20:41573" autocomplete="off" spellcheck="false"></div>
+          <button class="btn" id="nbGo">Connect</button>
+        </div>
+        <div class="pstat idle" id="nbStat" style="display:none"><i></i><span></span></div>
+        <div class="hint">Devices listed here were paired before and have Wireless debugging on. A phone that was never paired needs the QR code or pairing code first.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="filterHost">
+  <div class="dd" id="devDD">
+    <button class="dd-btn" id="devBtn" aria-haspopup="listbox" aria-expanded="false" title="Filter by device">
+      <span class="ico" id="devIco"></span><span class="lbl" id="devLabel">All devices</span>
+      <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="dd-menu" id="devMenu" role="listbox"></div>
+  </div>
+  <div class="dd" id="appDD">
+    <button class="dd-btn" id="appBtn" aria-haspopup="listbox" aria-expanded="false" title="Filter by app">
+      <svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg>
+      <span class="lbl" id="appLabel">All apps</span>
+      <span class="clr" id="appClr" title="Clear app filter"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+      <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="dd-menu" id="appMenu" role="listbox"></div>
+  </div>
+  <div class="dd" id="routeDD">
+    <button class="dd-btn" id="routeBtn" aria-haspopup="listbox" aria-expanded="false" title="Filter by route">
+      <svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H14a4 4 0 004-4V8.5M6 15.5V10a4 4 0 014-4h5.5"/></svg>
+      <span class="lbl" id="routeLabel">All routes</span>
+      <span class="clr" id="routeClr" title="Clear route filter"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+      <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="dd-menu wide" id="routeMenu" role="listbox">
+      <div class="dd-search">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="routeQ" placeholder="Search routes…" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="dd-list" id="routeList"></div>
+    </div>
+  </div>
+</div>
+<div id="toast"><i></i><span></span></div>
+
+<script src="features.js"></script>
+<script src="client.js"></script>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} },
+};
+if (/Electron/.test(navigator.userAgent)) document.documentElement.classList.add('electron');
+
+const S = {
+  byId: new Map(), order: [], sel: null, filter: '', chip: 'all', paused: false, tab: 'headers', revealed: false,
+  device: 'all', devices: new Map(), adb: 'starting', route: null, method: null, app: null,
+  view: ['raw', 'client'].includes(store.get('view')) ? store.get('view') : 'requests',
+};
+const DEV_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6', '#06b6d4', '#ef4444', '#84cc16'];
+// Colour from a hash of the device key, so it stays the same across reconnects and restarts.
+const devColor = (serial) => {
+  let h = 0;
+  for (const ch of String(serial || '')) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  return DEV_COLORS[Math.abs(h) % DEV_COLORS.length];
+};
+const devName = (serial) => S.devices.get(serial)?.name || S.names?.[serial]?.name || serial || 'unknown';
+
+function fmtSize(n) {
+  if (n == null) return '—';
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' kB';
+  return (n / 1024 / 1024).toFixed(2) + ' MB';
+}
+function fmtTime(ms) {
+  if (ms == null) return '';
+  return ms < 1000 ? ms + ' ms' : (ms / 1000).toFixed(2) + ' s';
+}
+function parseUrl(u) { try { return new URL(u); } catch { return null; } }
+function statusClass(e) {
+  if (e.state === 'failed') return 'sF';
+  if (e.status == null) return 'sP';
+  return 's' + String(e.status)[0];
+}
+function statusPill(e) {
+  if (e.state === 'failed') return `<span class="pill sF">Failed</span>`;
+  if (e.status == null) return `<span class="pill sP"><span class="spin"></span>…</span>`;
+  return `<span class="pill ${statusClass(e)}">${e.status}</span>`;
+}
+function pathHtml(e) {
+  const u = parseUrl(e.url);
+  if (!u) return esc(e.url);
+  return esc(u.pathname) + (u.search ? `<span class="q">${esc(u.search)}</span>` : '');
+}
+
+function inDevice(e) { return S.device === 'all' || e.device === S.device; }
+
+// Collapse ids in a path so calls to the same endpoint group together:
+// /v2/sales/0eaa2636-…/constraints -> /v2/sales/:id/constraints
+const ID_SEG = [
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, // uuid
+  /^\d+$/, // numeric
+  /^(tenant|sub_org|org|user|account|branch)_[0-9a-z]+$/i, // prefixed codes
+  /^[0-9a-f]{16,}$/i, // long hex
+  /^[0-9A-HJKMNP-TV-Z]{26}$/, // ulid
+];
+const routeCache = new Map();
+function routeOf(e) {
+  let r = routeCache.get(e.url);
+  if (!r) {
+    const u = parseUrl(e.url);
+    const path = u ? u.pathname : e.url.split('?')[0];
+    r = path.split('/').map((seg) => (ID_SEG.some((re) => re.test(seg)) ? ':id' : seg)).join('/') || '/';
+    routeCache.set(e.url, r);
+  }
+  return `${e.method} ${r}`;
+}
+function inRoute(e) { return !S.route || routeOf(e) === S.route; }
+function inApp(e) { return !S.app || e.app === S.app; }
+function inMethod(e) { return !S.method || e.method === S.method; }
+function inChip(e, c) {
+  if (c === 'all') return true;
+  if (c === 'failed') return e.state === 'failed';
+  if (c === 'pending') return e.state === 'pending' && e.status == null;
+  return String(e.status ?? '')[0] === c;
+}
+// ---------- MIME type ----------
+function mimeOf(e) {
+  if (e._mime !== undefined) return e._mime;
+  let m = e.mime || '';
+  if (!m) {
+    const h = (e.respHeaders || []).find(([k]) => /^content-type$/i.test(k));
+    m = h ? h[1] : '';
+  }
+  return (e._mime = m.split(';')[0].trim().toLowerCase());
+}
+function shortMime(e) {
+  const m = mimeOf(e);
+  if (!m) return e.state === 'pending' && e.status == null ? '' : '—';
+  const sub = m.split('/')[1] || m;
+  if (/json/.test(sub)) return 'json';
+  if (/javascript|ecmascript/.test(sub)) return 'js';
+  if (m.startsWith('image/')) return sub.replace('svg+xml', 'svg');
+  if (/x-www-form-urlencoded/.test(sub)) return 'form';
+  if (/protobuf|proto/.test(sub)) return 'protobuf';
+  return sub.replace(/^x-/, '').slice(0, 14);
+}
+function inMime(e) { return !S.mime || mimeOf(e) === S.mime; }
+
+// ---------- query language (DevTools-style) ----------
+// Tokens: key:value filters (optionally negated with a leading -) plus free text.
+const QKEYS = {
+  mime: 'mime', 'mime-type': 'mime', type: 'mime', method: 'method', status: 'status', 'status-code': 'status',
+  domain: 'domain', host: 'domain', path: 'path', url: 'url', app: 'app', device: 'device',
+  'larger-than': 'larger', 'smaller-than': 'smaller', is: 'is', has: 'has',
+};
+const QHELP = [
+  ['mime:', 'MIME type — mime:application/json, mime:image/*'],
+  ['method:', 'HTTP method — method:POST'],
+  ['status:', 'status:4xx, status:404, status:>=400, status:failed'],
+  ['domain:', 'host — domain:*.example.com'],
+  ['path:', 'path contains — path:/v2/sales'],
+  ['url:', 'full URL contains'],
+  ['app:', 'app package — app:com.example'],
+  ['device:', 'device name'],
+  ['larger-than:', 'response size — larger-than:100k'],
+  ['smaller-than:', 'response size — smaller-than:1k'],
+  ['is:', 'is:failed, is:pending, is:error, is:slow, is:truncated, is:chrome'],
+  ['has:', 'has:body, has:query, has:request-body'],
+];
+function wild(v) {
+  const s = v.toLowerCase();
+  if (!s.includes('*')) return (x) => String(x || '').toLowerCase().includes(s);
+  const re = new RegExp('^' + s.split('*').map((p) => p.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$');
+  return (x) => re.test(String(x || '').toLowerCase());
+}
+function bytes(v) {
+  const m = String(v).toLowerCase().match(/^(\d+(?:\.\d+)?)\s*(b|k|kb|m|mb)?$/);
+  if (!m) return null;
+  return parseFloat(m[1]) * ({ k: 1024, kb: 1024, m: 1048576, mb: 1048576 }[m[2]] || 1);
+}
+function statusTest(v) {
+  const s = v.toLowerCase();
+  if (s === 'failed' || s === 'pending') return (e) => inChip(e, s);
+  let m = s.match(/^([1-5])xx$/);
+  if (m) return (e) => String(e.status ?? '')[0] === m[1];
+  m = s.match(/^(>=|<=|>|<)(\d{3})$/);
+  if (m) {
+    const n = Number(m[2]);
+    return (e) => e.status != null && ({ '>=': e.status >= n, '<=': e.status <= n, '>': e.status > n, '<': e.status < n }[m[1]]);
+  }
+  const w = wild(s);
+  return (e) => e.status != null && w(String(e.status));
+}
+function makeTest(key, val) {
+  const w = wild(val);
+  switch (key) {
+    case 'mime': return (e) => w(mimeOf(e));
+    case 'method': return (e) => w(e.method);
+    case 'status': return statusTest(val);
+    case 'domain': return (e) => w(parseUrl(e.url)?.host);
+    case 'path': return (e) => w(parseUrl(e.url)?.pathname);
+    case 'url': return (e) => w(e.url);
+    case 'app': return (e) => w(e.app);
+    case 'device': return (e) => w(devName(e.device));
+    case 'larger': { const n = bytes(val); return n == null ? null : (e) => (e.size ?? e.transferSize ?? -1) > n; }
+    case 'smaller': { const n = bytes(val); return n == null ? null : (e) => (e.size ?? e.transferSize ?? Infinity) < n; }
+    case 'is': {
+      const v = val.toLowerCase();
+      if (v === 'failed' || v === 'pending') return (e) => inChip(e, v);
+      if (v === 'error') return (e) => e.state === 'failed' || e.status >= 400;
+      if (v === 'slow') return (e) => (e.durationMs ?? 0) >= 1500;
+      if (v === 'truncated') return (e) => !!e.truncated;
+      if (v === 'chrome' || v === 'okhttp') return (e) => (e.source || 'okhttp') === v;
+      return null;
+    }
+    case 'has': {
+      const v = val.toLowerCase();
+      if (v === 'body' || v === 'response-body') return (e) => !!e.respBody;
+      if (v === 'request-body' || v === 'payload') return (e) => !!e.reqBody;
+      if (v === 'query') return (e) => !!parseUrl(e.url)?.search;
+      return null;
+    }
+  }
+  return null;
+}
+function tokenize(str) { return str.match(/-?[\w-]+:"[^"]*"|-?[\w-]+:\S*|"[^"]*"|\S+/g) || []; }
+function parseQuery(str) {
+  const tests = [];
+  const words = [];
+  let bad = false;
+  for (const tok of tokenize(str)) {
+    const m = tok.match(/^(-?)([\w-]+):(.*)$/);
+    const key = m && QKEYS[m[2].toLowerCase()];
+    if (key) {
+      const val = m[3].replace(/^"|"$/g, '');
+      if (!val) continue; // still typing
+      const t = makeTest(key, val);
+      if (!t) { bad = true; continue; }
+      tests.push(m[1] ? (e) => !t(e) : t);
+    } else {
+      words.push(tok.replace(/^"|"$/g, '').toLowerCase());
+    }
+  }
+  return { tests, words, bad };
+}
+S.q = parseQuery('');
+function inText(e) {
+  const { tests, words } = S.q;
+  for (const t of tests) if (!t(e)) return false;
+  if (!words.length) return true;
+  const hay = (e.method + ' ' + e.url + ' ' + (e.status ?? '') + ' ' + (e.error ?? '')).toLowerCase();
+  return words.every((q) => hay.includes(q) || e.reqBody.toLowerCase().includes(q) || e.respBody.toLowerCase().includes(q));
+}
+
+let queued = false;
+function schedule() {
+  if (queued) return;
+  queued = true;
+  requestAnimationFrame(() => { queued = false; renderList(); renderRoutes(); renderApps(); });
+}
+
+function renderList() {
+  const list = $('#list');
+  const atBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 40;
+  const all = S.order.map((id) => S.byId.get(id));
+  const base = all.filter((e) => !e.hidden && inDevice(e) && inApp(e) && inText(e));
+  S.base = base;
+  const scoped = base.filter((e) => inRoute(e) && inMethod(e) && inMime(e));
+  const shown = scoped.filter((e) => inChip(e, S.chip));
+
+  // Show the Device column only when calls came from more than one device.
+  const seen = new Set(all.map((e) => e.device));
+  const apps = new Set(all.map((e) => e.app).filter(Boolean));
+  $('#table').classList.toggle('hide-dev', seen.size < 2 && S.device === 'all');
+  $('#table').classList.toggle('hide-app', apps.size < 2 && !S.app);
+  S.fitColumns?.();
+  markFunnels();
+
+  WF.frame(shown);
+  S.shown = shown;
+  renderRows();
+
+  const empty = !shown.length;
+  $('#empty').style.display = empty ? 'flex' : 'none';
+  $('#list').style.display = empty ? 'none' : 'block';
+  if (empty) {
+    $('#emptyTitle').textContent = all.length ? 'No matching requests' : 'Waiting for requests';
+    $('#emptyText').textContent = all.length
+      ? 'Nothing matches the current filters.'
+      : 'Open any app on a connected phone or emulator — calls logged by OkHttp’s HttpLoggingInterceptor show up here live.';
+  }
+  if (atBottom) list.scrollTop = list.scrollHeight;
+
+  renderStatusMenu();
+  renderMethodMenu();
+  const bytes = scoped.reduce((a, e) => a + (e.transferSize ?? e.size ?? 0), 0);
+  const fails = scoped.filter((e) => e.state === 'failed' || e.status >= 400).length;
+  $('#sumCount').textContent = scoped.length;
+  $('#sumSize').textContent = fmtSize(bytes);
+  $('#sumFail').textContent = fails;
+  $('#sumFailWrap').style.display = fails ? '' : 'none';
+  $('#sumShown').textContent = shown.length !== scoped.length ? `${shown.length} shown` : '';
+}
+
+function rowHtml(e) {
+  const bad = e.state === 'failed' || e.status >= 400;
+  const speed = e.durationMs >= 5000 ? 'vslow' : e.durationMs >= 1500 ? 'slow' : '';
+  const size = e.truncated
+    ? `<span title="Body only partly logged">${fmtSize(e.size)} <span class="warnmark">⚠</span></span>`
+    : fmtSize(e.transferSize ?? e.size);
+  return `<tr data-id="${e.id}" class="${e.id === S.sel ? 'sel' : ''} ${bad ? 'bad' : ''}" title="${esc(e.url)}">
+    <td class="c-st">${statusPill(e)}</td>
+    <td class="c-m"><span class="method m-${esc(e.method)}">${esc(e.method)}</span></td>
+    <td><span class="path">${pathHtml(e)}</span>${protoLabel(e)}</td>
+    <td class="c-ty" title="${esc(mimeOf(e))}">${esc(shortMime(e))}</td>
+    <td class="c-d"><span class="dev"><span class="sw" style="background:${devColor(e.device)}"></span>${esc(devName(e.device))}</span></td>
+    <td class="c-a" title="${esc(e.app || '')}">${esc(e.app ? e.app.split('.').slice(-2).join('.') : '')}</td>
+    <td class="c-t"><div class="timing ${speed}">${fmtTime(e.durationMs)}</div></td>
+    ${WF.cell(e)}
+    <td class="c-s">${e.state === 'pending' && e.status == null ? '' : size}</td>
+    <td class="c-at">${esc(e.started.slice(6))}</td></tr>`;
+}
+
+// Only the rows in (and just around) the viewport are in the DOM; spacer rows stand in for the
+// rest, so 50,000 calls scroll as smoothly as 50.
+const ROWS = { h: 39, over: 12, head: 34 };
+function renderRows() {
+  const list = $('#list');
+  const shown = S.shown || [];
+  const view = list.clientHeight || 800;
+  const top = Math.max(0, list.scrollTop - ROWS.head);
+  let a = Math.max(0, Math.floor(top / ROWS.h) - ROWS.over);
+  let b = Math.min(shown.length, Math.ceil((top + view) / ROWS.h) + ROWS.over);
+  if (shown.length <= 400) { a = 0; b = shown.length; } // small lists: just draw everything
+  // colspan must equal the visible columns, or a fixed-layout table grows a phantom column.
+  const cols = [...document.querySelectorAll('#table thead th')].filter((th) => getComputedStyle(th).display !== 'none').length || 1;
+  const spacer = (n) => (n > 0 ? `<tr class="spacer" aria-hidden="true"><td colspan="${cols}" style="height:${n * ROWS.h}px;padding:0;border:0"></td></tr>` : '');
+  $('#rows').innerHTML = spacer(a) + shown.slice(a, b).map(rowHtml).join('') + spacer(shown.length - b);
+  S.rowWindow = [a, b];
+  // Measure real row + header height once rows exist (fonts/zoom change them).
+  const first = $('#rows tr[data-id]');
+  if (first && first.offsetHeight) ROWS.h = first.offsetHeight;
+  const th = $('#table thead');
+  if (th?.offsetHeight) ROWS.head = th.offsetHeight;
+}
+let rowsQueued = false;
+$('#list').addEventListener('scroll', () => {
+  if (rowsQueued || !S.shown || S.shown.length <= 400) return;
+  rowsQueued = true;
+  requestAnimationFrame(() => {
+    rowsQueued = false;
+    const [a, b] = S.rowWindow || [0, 0];
+    const list = $('#list');
+    const first = Math.floor(Math.max(0, list.scrollTop - ROWS.head) / ROWS.h);
+    const last = Math.ceil((list.scrollTop + list.clientHeight) / ROWS.h);
+    if (first < a + 4 || last > b - 4) renderRows();
+  });
+});
+// Scroll so a call is visible (works whether or not its row is currently drawn).
+S.scrollToEntry = (id, block = 'nearest') => {
+  const idx = (S.shown || []).findIndex((e) => e.id === id);
+  if (idx < 0) return;
+  const list = $('#list');
+  const y = ROWS.head + idx * ROWS.h;
+  if (block === 'center') list.scrollTop = y - list.clientHeight / 2;
+  else if (y < list.scrollTop + ROWS.head) list.scrollTop = y - ROWS.head;
+  else if (y + ROWS.h > list.scrollTop + list.clientHeight) list.scrollTop = y + ROWS.h - list.clientHeight;
+  renderRows();
+};
+
+// ---------- devices ----------
+const ICONS = {
+  all: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="13" height="10" rx="2"/><rect x="15" y="8" width="7" height="12" rx="1.6"/><path d="M6 18h6"/></svg>',
+  phone: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>',
+  browser: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>',
+  emulator: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="19" height="13" rx="2"/><path d="M8 20.5h8M12 16.5v4"/></svg>',
+};
+const CHECK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+function shortSerial(serial) {
+  const m = serial.match(/^adb-([0-9a-f]+)-/i); // wireless-debugging mDNS names are long
+  return m ? `wireless · ${m[1]}` : serial;
+}
+
+function renderDevices() {
+  const list = [...S.devices.values()];
+  if (S.device !== 'all' && !S.devices.has(S.device)) S.device = 'all';
+  const counts = new Map();
+  for (const id of S.order) {
+    const d = S.byId.get(id).device;
+    counts.set(d, (counts.get(d) || 0) + 1);
+  }
+  const item = (value, icon, title, sub, count, online, color) => `
+    <button class="dd-item ${S.device === value ? 'on' : ''}" role="option" data-v="${esc(value)}">
+      <span class="av" ${color ? `style="color:${color}"` : ''}>${icon}${online == null ? '' : `<span class="st ${online ? 'on' : ''}"></span>`}</span>
+      <span class="tx"><b>${esc(title)}</b><small>${esc(sub)}</small></span>
+      <span class="cnt">${count}</span>
+      <span class="ck">${CHECK}</span>
+    </button>`;
+  const online = list.filter((d) => d.online);
+  $('#devMenu').innerHTML =
+    item('all', ICONS.all, 'All devices', `${online.length} connected`, S.order.length, null, null) +
+    (list.length ? '<div class="dd-sep"></div><div class="dd-head">Devices</div>' : '') +
+    list.map((d) => item(d.serial, ICONS[d.kind] || ICONS.phone, d.name,
+      `${d.kind === 'emulator' ? 'Emulator' : d.kind === 'browser' ? 'Browser' : 'Phone'} · ${shortSerial(d.addr || d.serial)}`,
+      counts.get(d.serial) || 0, d.online, devColor(d.serial))).join('') +
+    '<div class="dd-sep"></div><button class="dd-foot" data-pair><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 9a14 14 0 0119 0M5.5 12.5a9.5 9.5 0 0113 0M8.8 16a5 5 0 016.4 0"/><circle cx="12" cy="19.5" r="1.2" fill="currentColor"/></svg> Connect a device over Wi-Fi…</button>'
+    + '<button class="dd-foot" data-pair-browser><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg> Capture a browser on this Mac…</button>';
+
+  const cur = S.devices.get(S.device);
+  $('#devLabel').textContent = cur ? cur.name : 'All devices';
+  $('#devIco').innerHTML = cur ? ICONS[cur.kind] || ICONS.phone : ICONS.all;
+  $('#devIco').style.color = cur ? devColor(cur.serial) : '';
+
+  const c = $('#conn');
+  if (S.adb === 'adb not found') {
+    c.className = 'conn bad';
+    c.querySelector('span').textContent = 'adb not found';
+  } else if (!online.length) {
+    c.className = 'conn';
+    c.querySelector('span').textContent = 'No device connected';
+  } else {
+    c.className = 'conn ok';
+    c.querySelector('span').textContent = online.length === 1 ? online[0].name : `${online.length} devices connected`;
+  }
+  c.title = online.map((d) => `${d.name} (${d.serial})`).join('\n');
+}
+
+(() => {
+  const dd = $('#devDD');
+  const btn = $('#devBtn');
+  const menu = $('#devMenu');
+  const items = () => [...menu.querySelectorAll('.dd-item')];
+  const setOpen = (open) => {
+    dd.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', open);
+    items().forEach((x) => x.classList.remove('kb'));
+    if (open) renderDevices();
+  };
+  const choose = (v) => {
+    S.device = v;
+    setOpen(false);
+    renderDevices();
+    renderList();
+    renderRoutes();
+    renderApps();
+    Raw.render();
+  };
+  btn.addEventListener('click', () => setOpen(!dd.classList.contains('open')));
+  menu.addEventListener('click', (ev) => { const it = ev.target.closest('.dd-item'); if (it) choose(it.dataset.v); });
+  document.addEventListener('pointerdown', (ev) => { if (!dd.contains(ev.target)) { setOpen(false); markFunnels(); } });
+  dd.addEventListener('keydown', (ev) => {
+    if (!dd.classList.contains('open')) {
+      if (ev.key === 'ArrowDown' || ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setOpen(true); }
+      return;
+    }
+    const list = items();
+    let i = list.findIndex((x) => x.classList.contains('kb'));
+    if (i < 0) i = list.findIndex((x) => x.classList.contains('on'));
+    if (ev.key === 'Escape') { ev.preventDefault(); setOpen(false); btn.focus(); }
+    else if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+      ev.preventDefault();
+      i = (i + (ev.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length;
+      list.forEach((x, k) => x.classList.toggle('kb', k === i));
+    } else if (ev.key === 'Enter' && i >= 0) { ev.preventDefault(); choose(list[i].dataset.v); }
+    ev.stopPropagation();
+  });
+})();
+
+// ---------- routes ----------
+function routeHtml(route) {
+  const sp = route.indexOf(' ');
+  return esc(route.slice(sp + 1)).replace(/:id/g, '<span class="p">:id</span>');
+}
+function renderRoutes() {
+  const btn = $('#routeBtn');
+  btn.classList.toggle('active', !!S.route);
+  $('#routeLabel').innerHTML = S.route
+    ? `<span class="method m-${esc(S.route.split(' ')[0])}">${esc(S.route.split(' ')[0])}</span> ${routeHtml(S.route)}`
+    : 'All routes';
+  btn.title = S.route || 'Filter by route';
+  if (!$('#routeDD').classList.contains('open')) return;
+
+  // Counts respect the device + text filters, not the route filter itself.
+  const groups = new Map();
+  for (const id of S.order) {
+    const e = S.byId.get(id);
+    if (e.hidden || !inDevice(e) || !inApp(e) || !inText(e)) continue;
+    const k = routeOf(e);
+    const g = groups.get(k) || { n: 0, err: 0 };
+    g.n++;
+    if (e.state === 'failed' || e.status >= 400) g.err++;
+    groups.set(k, g);
+  }
+  const q = $('#routeQ').value.trim().toLowerCase();
+  const rows = [...groups.entries()].filter(([k]) => !q || k.toLowerCase().includes(q)).sort((a, b) => b[1].n - a[1].n);
+  const total = [...groups.values()].reduce((a, g) => a + g.n, 0);
+  const item = (value, method, label, g) => `
+    <button class="dd-item ${(S.route || '') === value ? 'on' : ''}" role="option" data-v="${esc(value)}">
+      <span class="rm ${method ? 'method m-' + esc(method) : ''}">${esc(method || '')}</span>
+      <span class="rt">${label}</span>
+      ${g.err ? `<span class="cnt err" title="Errors">${g.err}</span>` : ''}
+      <span class="cnt">${g.n}</span>
+      <span class="ck">${CHECK}</span>
+    </button>`;
+  $('#routeList').innerHTML =
+    (q ? '' : item('', '', 'All routes', { n: total, err: 0 }) + '<div class="dd-sep"></div>') +
+    (rows.length
+      ? rows.map(([k, g]) => item(k, k.split(' ')[0], routeHtml(k), g)).join('')
+      : `<div class="dd-empty">No routes match “${esc(q)}”</div>`);
+}
+
+(() => {
+  const dd = $('#routeDD');
+  const btn = $('#routeBtn');
+  const q = $('#routeQ');
+  const items = () => [...$('#routeList').querySelectorAll('.dd-item')];
+  const setOpen = (open) => {
+    dd.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', open);
+    if (open) {
+      q.value = '';
+      renderRoutes();
+      setTimeout(() => q.focus(), 0);
+    }
+  };
+  const choose = (v) => {
+    S.route = v || null;
+    setOpen(false);
+    renderRoutes();
+    renderList();
+  };
+  btn.addEventListener('click', (ev) => {
+    if (ev.target.closest('#routeClr')) { ev.stopPropagation(); choose(null); return; }
+    setOpen(!dd.classList.contains('open'));
+  });
+  $('#routeList').addEventListener('click', (ev) => { const it = ev.target.closest('.dd-item'); if (it) choose(it.dataset.v); });
+  q.addEventListener('input', () => renderRoutes());
+  document.addEventListener('pointerdown', (ev) => { if (!dd.contains(ev.target)) dd.classList.remove('open'); });
+  dd.addEventListener('keydown', (ev) => {
+    if (!dd.classList.contains('open')) return;
+    const list = items();
+    let i = list.findIndex((x) => x.classList.contains('kb'));
+    if (ev.key === 'Escape') { ev.preventDefault(); setOpen(false); btn.focus(); }
+    else if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+      ev.preventDefault();
+      if (!list.length) return;
+      i = (i + (ev.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length;
+      list.forEach((x, k) => x.classList.toggle('kb', k === i));
+      list[i].scrollIntoView({ block: 'nearest' });
+    } else if (ev.key === 'Enter') {
+      ev.preventDefault();
+      const pick = list[i >= 0 ? i : q.value ? (list[0]?.dataset.v === '' ? 1 : 0) : -1];
+      if (pick) choose(pick.dataset.v);
+    }
+    ev.stopPropagation();
+  });
+})();
+
+// ---------- apps ----------
+function renderApps() {
+  const btn = $('#appBtn');
+  btn.classList.toggle('active', !!S.app);
+  $('#appLabel').textContent = S.app || 'All apps';
+  btn.title = S.app || 'Filter by app';
+  if (!$('#appDD').classList.contains('open')) return;
+  const counts = new Map();
+  for (const id of S.order) {
+    const e = S.byId.get(id);
+    if (!inDevice(e) || !e.app) continue;
+    counts.set(e.app, (counts.get(e.app) || 0) + 1);
+  }
+  const rows = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const item = (value, title, sub, n) => `
+    <button class="dd-item ${(S.app || '') === value ? 'on' : ''}" role="option" data-v="${esc(value)}">
+      <span class="av">${ICONS_APP}</span>
+      <span class="tx"><b>${esc(title)}</b><small>${esc(sub)}</small></span>
+      <span class="cnt">${n}</span><span class="ck">${CHECK}</span>
+    </button>`;
+  const total = rows.reduce((a, [, n]) => a + n, 0);
+  $('#appMenu').innerHTML = item('', 'All apps', `${rows.length} app${rows.length === 1 ? '' : 's'} seen`, total) +
+    (rows.length ? '<div class="dd-sep"></div><div class="dd-head">Apps</div>' : '') +
+    rows.map(([app, n]) => item(app, app.split('.').slice(-2).join('.'), app, n)).join('');
+}
+const ICONS_APP = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg>';
+(() => {
+  const dd = $('#appDD');
+  const btn = $('#appBtn');
+  const setOpen = (open) => { dd.classList.toggle('open', open); btn.setAttribute('aria-expanded', open); if (open) renderApps(); };
+  const choose = (v) => {
+    S.app = v || null;
+    setOpen(false);
+    renderApps(); renderList(); renderRoutes(); Raw.render();
+  };
+  btn.addEventListener('click', (ev) => {
+    if (ev.target.closest('#appClr')) { ev.stopPropagation(); choose(null); return; }
+    setOpen(!dd.classList.contains('open'));
+  });
+  $('#appMenu').addEventListener('click', (ev) => { const it = ev.target.closest('.dd-item'); if (it) choose(it.dataset.v); });
+  document.addEventListener('pointerdown', (ev) => { if (!dd.contains(ev.target)) dd.classList.remove('open'); });
+  dd.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { setOpen(false); btn.focus(); } ev.stopPropagation(); });
+})();
+
+// ---------- column-header filters ----------
+const FILTER_DD = { status: '#statusDD', method: '#methodDD', route: '#routeDD', device: '#devDD', app: '#appDD', mime: '#mimeDD' };
+function markFunnels() {
+  const active = {
+    status: S.chip !== 'all', method: !!S.method, mime: !!S.mime, route: !!S.route, device: S.device !== 'all', app: !!S.app,
+  };
+  document.querySelectorAll('.fbtn').forEach((b) => {
+    b.classList.toggle('active', !!active[b.dataset.f]);
+    b.classList.toggle('open', !!$(FILTER_DD[b.dataset.f])?.classList.contains('open'));
+  });
+}
+function placePopover(dd, anchor) {
+  const r = anchor.getBoundingClientRect();
+  dd.style.left = r.left + 'px';
+  dd.style.top = r.bottom + 6 + 'px';
+  requestAnimationFrame(() => {
+    const w = dd.querySelector('.dd-menu').offsetWidth;
+    const left = Math.max(12, Math.min(r.left, window.innerWidth - w - 12));
+    dd.style.left = left + 'px';
+  });
+}
+document.querySelectorAll('.fbtn').forEach((b) => {
+  b.addEventListener('pointerdown', () => { b.dataset.wasOpen = $(FILTER_DD[b.dataset.f]).classList.contains('open') ? '1' : ''; });
+  b.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    const dd = $(FILTER_DD[b.dataset.f]);
+    if (b.dataset.wasOpen) { markFunnels(); return; } // this click was meant to close it
+    placePopover(dd, b);
+    dd.querySelector('.dd-btn').click();
+    markFunnels();
+  });
+});
+document.addEventListener('pointerdown', () => setTimeout(markFunnels));
+window.addEventListener('resize', () => document.querySelectorAll('#filterHost .dd.open').forEach((dd) => dd.classList.remove('open')));
+
+// A small single-choice menu (status, method) built like the other dropdowns.
+function simpleDD(id, title, render, choose) {
+  const host = $('#filterHost');
+  host.insertAdjacentHTML('beforeend', `<div class="dd" id="${id}"><button class="dd-btn" aria-haspopup="listbox">${esc(title)}</button><div class="dd-menu" role="listbox"></div></div>`);
+  const dd = $('#' + id);
+  const menu = dd.querySelector('.dd-menu');
+  dd.querySelector('.dd-btn').addEventListener('click', () => {
+    const open = !dd.classList.contains('open');
+    dd.classList.toggle('open', open);
+    if (open) render(menu);
+  });
+  menu.addEventListener('click', (ev) => {
+    const it = ev.target.closest('.dd-item'); if (!it) return;
+    choose(it.dataset.v);
+    dd.classList.remove('open');
+    markFunnels();
+  });
+  document.addEventListener('pointerdown', (ev) => { if (!dd.contains(ev.target)) { dd.classList.remove('open'); } });
+  dd.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') dd.classList.remove('open'); ev.stopPropagation(); });
+  return { dd, menu, render: () => dd.classList.contains('open') && render(menu) };
+}
+function listItem(value, current, lead, title, sub, n) {
+  return `<button class="dd-item ${current === value ? 'on' : ''}" role="option" data-v="${esc(value)}">
+    <span class="rm">${lead}</span>
+    <span class="tx"><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>
+    <span class="cnt">${n}</span><span class="ck">${CHECK}</span></button>`;
+}
+const STATUS_OPTS = [
+  ['all', '', 'All statuses', ''],
+  ['2', '<span class="pill s2">2xx</span>', 'Success', ''],
+  ['3', '<span class="pill s3">3xx</span>', 'Redirect / not modified', ''],
+  ['4', '<span class="pill s4">4xx</span>', 'Client error', ''],
+  ['5', '<span class="pill s5">5xx</span>', 'Server error', ''],
+  ['failed', '<span class="pill sF">Failed</span>', 'No response', 'network error, timeout, canceled'],
+  ['pending', '<span class="pill sP">…</span>', 'Pending', 'waiting for a response'],
+];
+const statusDD = simpleDD('statusDD', 'Status', (menu) => {
+  const pool = (S.base || []).filter((e) => inRoute(e) && inMethod(e) && inMime(e));
+  menu.innerHTML = STATUS_OPTS.map(([v, lead, t, sub], i) =>
+    listItem(v, S.chip, lead, t, sub, pool.filter((e) => inChip(e, v)).length) + (i === 0 ? '<div class="dd-sep"></div>' : '')).join('');
+}, (v) => { S.chip = v; renderList(); });
+const methodDD = simpleDD('methodDD', 'Method', (menu) => {
+  const pool = (S.base || []).filter((e) => inRoute(e) && inChip(e, S.chip) && inMime(e));
+  const counts = new Map();
+  for (const e of pool) counts.set(e.method, (counts.get(e.method) || 0) + 1);
+  const rows = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  menu.innerHTML = listItem('', S.method || '', '', 'All methods', '', pool.length) + '<div class="dd-sep"></div>'
+    + rows.map(([m, n]) => listItem(m, S.method || '', `<span class="method m-${esc(m)}">${esc(m)}</span>`, m, '', n)).join('');
+}, (v) => { S.method = v || null; renderList(); });
+function renderStatusMenu() { statusDD.render(); }
+const mimeDD = simpleDD('mimeDD', 'Type', (menu) => {
+  const pool = (S.base || []).filter((e) => inRoute(e) && inMethod(e) && inChip(e, S.chip));
+  const counts = new Map();
+  for (const e of pool) { const m = mimeOf(e) || ''; counts.set(m, (counts.get(m) || 0) + 1); }
+  const rows = [...counts.entries()].filter(([m]) => m).sort((a, b) => b[1] - a[1]);
+  menu.innerHTML = listItem('', S.mime || '', '', 'All types', '', pool.length) + '<div class="dd-sep"></div>'
+    + (rows.length ? rows.map(([m, n]) => listItem(m, S.mime || '', `<span class="method" style="color:var(--text-2)">${esc(shortMime({ _mime: m }))}</span>`, m, '', n)).join('')
+      : '<div class="dd-empty">No response types yet</div>');
+}, (v) => { S.mime = v || null; renderList(); });
+function renderMethodMenu() { methodDD.render(); mimeDD.render(); }
+
+// ---------- search suggestions ----------
+const Sug = {
+  el: $('#qsug'),
+  items: [],
+  i: -1,
+  // The token under the caret: [start, end, text].
+  token() {
+    const inp = $('#filter');
+    const v = inp.value;
+    const c = inp.selectionStart ?? v.length;
+    let a = c;
+    while (a > 0 && !/\s/.test(v[a - 1])) a--;
+    let b = c;
+    while (b < v.length && !/\s/.test(v[b])) b++;
+    return [a, b, v.slice(a, b)];
+  },
+  values(key) {
+    const pool = S.order.map((id) => S.byId.get(id)).filter((e) => inDevice(e));
+    const tally = (fn) => {
+      const m = new Map();
+      for (const e of pool) { const v = fn(e); if (v) m.set(v, (m.get(v) || 0) + 1); }
+      return [...m.entries()].sort((x, y) => y[1] - x[1]).slice(0, 40);
+    };
+    switch (key) {
+      case 'mime': return tally(mimeOf);
+      case 'method': return tally((e) => e.method);
+      case 'status': return [['2xx'], ['3xx'], ['4xx'], ['5xx'], ['>=400'], ['failed'], ['pending'], ...tally((e) => e.status && String(e.status))];
+      case 'domain': return tally((e) => parseUrl(e.url)?.host);
+      case 'app': return tally((e) => e.app);
+      case 'device': return tally((e) => devName(e.device));
+      case 'is': return [['failed'], ['pending'], ['error'], ['slow'], ['truncated'], ['chrome'], ['okhttp']];
+      case 'has': return [['body'], ['request-body'], ['query']];
+      case 'larger': case 'smaller': return [['1k'], ['10k'], ['100k'], ['1m']];
+    }
+    return [];
+  },
+  update() {
+    const inp = $('#filter');
+    if (S.view !== 'requests' || document.activeElement !== inp) return this.close();
+    const [, , tok] = this.token();
+    const neg = tok.startsWith('-') ? '-' : '';
+    const t = neg ? tok.slice(1) : tok;
+    let html = '';
+    this.items = [];
+    const m = t.match(/^([\w-]+):(.*)$/);
+    const key = m && QKEYS[m[1].toLowerCase()];
+    if (key) {
+      const typed = m[2].replace(/^"/, '').toLowerCase();
+      const vals = this.values(key).filter(([v]) => v.toLowerCase().includes(typed) && v.toLowerCase() !== typed);
+      if (vals.length) html += `<div class="qs-head">${esc(m[1])}</div>`;
+      for (const [v, n] of vals) {
+        const ins = `${neg}${m[1]}:${/\s/.test(v) ? `"${v}"` : v} `;
+        this.items.push(ins);
+        html += `<button class="qs" data-i="${this.items.length - 1}"><code>${esc(v)}</code><span class="d"></span>${n ? `<span class="cnt">${n}</span>` : ''}</button>`;
+      }
+    } else if (!t || /^[\w-]*$/.test(t)) {
+      const keys = QHELP.filter(([k]) => k.startsWith(t.toLowerCase()) && k !== t.toLowerCase() + ':');
+      if (keys.length && (t || !inp.value.trim())) {
+        html += '<div class="qs-head">Filters</div>';
+        for (const [k, d] of keys) {
+          this.items.push(neg + k);
+          html += `<button class="qs" data-i="${this.items.length - 1}"><code>${esc(k)}</code><span class="d">${esc(d)}</span></button>`;
+        }
+        if (!t) html += '<div class="qs-tip">Combine filters with spaces; prefix <code>-</code> to exclude, e.g. <code>-mime:image</code></div>';
+      }
+    }
+    this.i = -1;
+    this.el.innerHTML = html;
+    this.el.classList.toggle('open', !!html);
+  },
+  close() { this.el.classList.remove('open'); this.i = -1; },
+  pick(i) {
+    const ins = this.items[i];
+    if (ins == null) return;
+    const inp = $('#filter');
+    const [a, b] = this.token();
+    const v = inp.value;
+    inp.value = v.slice(0, a) + ins + v.slice(b).replace(/^\s+/, '');
+    const c = a + ins.length;
+    inp.setSelectionRange(c, c);
+    inp.dispatchEvent(new Event('input'));
+    inp.focus();
+  },
+  key(ev) {
+    if (!this.el.classList.contains('open')) return false;
+    const n = this.items.length;
+    if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+      this.i = (this.i + (ev.key === 'ArrowDown' ? 1 : -1) + n) % n;
+      this.el.querySelectorAll('.qs').forEach((x, k) => x.classList.toggle('kb', k === this.i));
+      this.el.querySelector('.qs.kb')?.scrollIntoView({ block: 'nearest' });
+      return true;
+    }
+    if ((ev.key === 'Enter' || ev.key === 'Tab') && n) {
+      this.pick(this.i >= 0 ? this.i : 0);
+      return true;
+    }
+    if (ev.key === 'Escape') { this.close(); return true; }
+    return false;
+  },
+};
+$('#filter').addEventListener('focus', () => Sug.update());
+$('#filter').addEventListener('click', () => Sug.update());
+$('#filter').addEventListener('blur', () => setTimeout(() => Sug.close(), 150));
+$('#filter').addEventListener('keydown', (ev) => { if (Sug.key(ev)) { ev.preventDefault(); ev.stopPropagation(); } });
+$('#filter').addEventListener('keyup', (ev) => { if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') Sug.update(); });
+Sug.el.addEventListener('pointerdown', (ev) => { ev.preventDefault(); const b = ev.target.closest('.qs'); if (b) Sug.pick(Number(b.dataset.i)); });
+
+// ---------- raw logs ----------
+function rawKind(msg) {
+  if (/^--> (GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS) /.test(msg)) return 'k-req';
+  if (/^<-- HTTP FAILED/.test(msg)) return 'k-bad';
+  const m = msg.match(/^<-- (\d)\d\d /);
+  if (m) return m[1] === '2' || m[1] === '3' ? 'k-ok' : 'k-bad';
+  if (/^(-->|<--) END/.test(msg)) return 'k-end';
+  return '';
+}
+const MAX_MSG = 3000;
+function rawRow(r, showApp) {
+  const msg = r.msg.length > MAX_MSG ? r.msg.slice(0, MAX_MSG) + ' …' : r.msg;
+  return `<div class="rl lv-${r.level} ${r.http ? rawKind(r.msg) : ''}"><span class="t">${esc(r.stamp.slice(6))}</span>`
+    + `<span class="sw" style="background:${devColor(r.device)}" title="${esc(devName(r.device))}"></span>`
+    + `<span class="lv">${esc(r.level)}</span><span class="tg" title="${esc(r.tag)}">${esc(r.tag)}</span>`
+    + (showApp ? `<span class="ap" title="${esc(Raw.appOf(r) || '')}">${esc(Raw.appOf(r) || '')}</span>` : '')
+    + `<span class="m">${esc(msg)}</span></div>`;
+}
+
+let entryRawHtml = null;
+let entryRawFor = null;
+let entryRawTimer = null;
+function loadEntryRaw(id) {
+  const e = S.byId.get(id);
+  const key = `${id}:${e?.state}:${e?.status}`;
+  if (entryRawFor === key) return;
+  if (entryRawFor?.split(':')[0] !== String(id)) entryRawHtml = null;
+  entryRawFor = key;
+  clearTimeout(entryRawTimer);
+  entryRawTimer = setTimeout(async () => {
+    try {
+      const { lines, dropped } = await (await fetch(`/entry-raw?id=${id}`)).json();
+      if (S.sel !== id || S.tab !== 'raw') return;
+      entryRawHtml = (dropped ? `<div class="banner warn">⚠ ${dropped} older line(s) were dropped from the log buffer</div>` : '')
+        + (lines.length ? `<div class="rawbox">${lines.map((r) => rawRow(r, false)).join('')}</div>` : '<div class="note">No raw lines kept for this call</div>');
+      const pane = $('#pane');
+      const sc = pane.scrollTop;
+      pane.innerHTML = entryRawHtml;
+      pane.scrollTop = sc;
+    } catch {}
+  }, 60);
+}
+
+const Raw = {
+  lines: [],
+  scope: store.get('rawScope') === 'http' ? 'http' : 'all',
+  wrap: store.get('rawWrap') === '1',
+  es: null,
+  pidApp: new Map(), // "serial:pid" -> app, learned from calls + http lines
+  MAX: 40000,
+  SHOW: 10000,
+  appOf(r) { return r.app || this.pidApp.get(`${r.device}:${r.pid}`) || ''; },
+  learn(r) { if (r.app) this.pidApp.set(`${r.device}:${r.pid}`, r.app); },
+  match(r) {
+    if (this.scope === 'http' && !r.http) return false;
+    if (S.device !== 'all' && r.device !== S.device) return false;
+    if (S.app && this.appOf(r) !== S.app) return false;
+    if (S.filter) {
+      const q = S.filter.toLowerCase();
+      if (!r.msg.toLowerCase().includes(q) && !r.tag.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  },
+  showApp() { return this.scope === 'all' && !S.app; },
+  render() {
+    if (S.view !== 'raw') return;
+    const shown = this.lines.filter((r) => this.match(r)).slice(-this.SHOW);
+    const list = $('#rawList');
+    list.classList.toggle('wrap', this.wrap);
+    list.innerHTML = shown.map((r) => rawRow(r, this.showApp())).join('');
+    list.scrollTop = list.scrollHeight;
+    this.count(shown.length);
+  },
+  count(n) {
+    const shown = n ?? $('#rawList').childElementCount;
+    $('#rawCount').textContent = `${shown.toLocaleString()} line${shown === 1 ? '' : 's'}${shown >= this.SHOW ? ' (latest)' : ''}`;
+    const empty = !shown;
+    $('#rawEmpty').style.display = empty ? 'flex' : 'none';
+    $('#rawList').style.display = empty ? 'none' : 'block';
+  },
+  append(batch) {
+    for (const r of batch) this.learn(r);
+    if (S.paused) return;
+    this.lines.push(...batch);
+    if (this.lines.length > this.MAX) this.lines.splice(0, this.lines.length - this.MAX);
+    if (S.view !== 'raw') return;
+    const list = $('#rawList');
+    const atBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 40;
+    const add = batch.filter((r) => this.match(r));
+    if (!add.length) return;
+    list.insertAdjacentHTML('beforeend', add.map((r) => rawRow(r, this.showApp())).join(''));
+    while (list.childElementCount > this.SHOW) list.firstElementChild.remove();
+    if (atBottom) list.scrollTop = list.scrollHeight;
+    this.count();
+  },
+  open() {
+    if (this.es) return;
+    this.es = new EventSource('/raw');
+    this.es.addEventListener('snapshot', (ev) => {
+      this.lines = JSON.parse(ev.data);
+      this.lines.forEach((r) => this.learn(r));
+      this.render();
+    });
+    this.es.addEventListener('lines', (ev) => this.append(JSON.parse(ev.data)));
+    this.es.addEventListener('clear', () => { this.lines = []; this.render(); });
+  },
+  close() { if (this.es) { this.es.close(); this.es = null; } },
+};
+$('#rawScope').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button'); if (!b) return;
+  Raw.scope = b.dataset.scope;
+  store.set('rawScope', Raw.scope);
+  document.querySelectorAll('#rawScope button').forEach((x) => x.classList.toggle('on', x === b));
+  Raw.render();
+});
+document.querySelectorAll('#rawScope button').forEach((x) => x.classList.toggle('on', x.dataset.scope === Raw.scope));
+$('#rawWrap').classList.toggle('on', Raw.wrap);
+$('#rawWrap').addEventListener('click', () => {
+  Raw.wrap = !Raw.wrap;
+  store.set('rawWrap', Raw.wrap ? '1' : '0');
+  $('#rawWrap').classList.toggle('on', Raw.wrap);
+  $('#rawList').classList.toggle('wrap', Raw.wrap);
+});
+$('#rawList').addEventListener('click', (ev) => {
+  const row = ev.target.closest('.rl');
+  if (row && !window.getSelection().toString()) row.classList.toggle('rl-open');
+});
+$('#rawCopy').addEventListener('click', () => {
+  const text = Raw.lines.filter((r) => Raw.match(r)).slice(-Raw.SHOW)
+    .map((r) => `${r.stamp} ${r.pid} ${r.tid} ${r.level} ${r.tag}: ${r.msg}`).join('\n');
+  copy(text, 'Log lines');
+});
+
+function setView(v) {
+  S.view = v;
+  store.set('view', v);
+  document.documentElement.classList.toggle('raw-mode', v === 'raw');
+  document.documentElement.classList.toggle('client-mode', v === 'client');
+  document.querySelectorAll('#viewSeg button').forEach((x) => x.classList.toggle('on', x.dataset.view === v));
+  $('#filter').placeholder = v === 'raw' ? 'Filter log lines by text or tag…' : 'Filter by URL, method, status or body…';
+  const bar = $('#rawCard .rawbar .grow');
+  for (const q of ['#devDD', '#appDD']) {
+    const dd = $(q);
+    dd.classList.remove('open');
+    dd.style.left = dd.style.top = '';
+    if (v === 'raw') bar.before(dd); else $('#filterHost').append(dd);
+  }
+  if (v === 'raw') { Raw.open(); Raw.render(); } else { Raw.close(); if (v === 'requests') renderList(); }
+}
+$('#viewSeg').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (b) setView(b.dataset.view); });
+
+// ---------- wireless pairing ----------
+const Pair = {
+  tab: 'qr',
+  pollT: null,
+  nbT: null,
+  el: $('#pairModal'),
+  open(tab) {
+    this.el.classList.add('open');
+    this.show(tab || this.tab);
+  },
+  close() {
+    this.el.classList.remove('open');
+    clearTimeout(this.pollT);
+    clearTimeout(this.nbT);
+    clearTimeout(this.brT);
+    fetch('/pair/qr/stop', { method: 'POST' }).catch(() => {});
+  },
+  show(tab) {
+    this.tab = tab;
+    document.querySelectorAll('#pairTabs .tab').forEach((t) => t.classList.toggle('on', t.dataset.p === tab));
+    document.querySelectorAll('.pane-pair').forEach((p) => p.classList.toggle('on', p.dataset.p === tab));
+    clearTimeout(this.pollT);
+    clearTimeout(this.nbT);
+    clearTimeout(this.brT);
+    $('#pairTitle').textContent = tab === 'browser' ? 'Capture a browser on this Mac' : 'Connect a device over Wi-Fi';
+    if (tab === 'browser') this.browsers();
+    if (tab === 'qr') this.startQr();
+    else fetch('/pair/qr/stop', { method: 'POST' }).catch(() => {});
+    if (tab === 'nearby') this.nearby();
+    if (tab === 'code') setTimeout(() => $('#pcTarget').focus(), 0);
+  },
+  async browsers() {
+    clearTimeout(this.brT);
+    if (!this.el.classList.contains('open') || this.tab !== 'browser') return;
+    try {
+      const st = await (await fetch('/browsers')).json();
+      $('#brList').innerHTML = st.installed.length
+        ? st.installed.map((b) => `<div class="nb"><span class="av" style="width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--surface);color:var(--text-2)">${ICONS.browser}</span>
+            <span class="tx"><b>${esc(b.name)}</b><small>${b.running ? 'running · captured' : 'opens with Netscope’s own profile'}</small></span>
+            <button class="btn" data-launch="${esc(b.id)}">${b.running ? 'Open address' : 'Launch'}</button></div>`).join('')
+        : '<div class="note">No Chromium-based browser found in Applications (Chrome, Edge, Brave, Chromium, Vivaldi). You can still attach to a port below.</div>';
+      $('#brRunning').innerHTML = st.running.length
+        ? '<div class="dd-head" style="padding-left:2px">Capturing now</div>' + st.running.map((r) => `<div class="nb"><span class="tx"><b>${esc(r.name)}</b><small>${r.tabs} tab${r.tabs === 1 ? '' : 's'} · port ${r.port}</small></span>
+            <button class="iconbtn" data-stop="${esc(r.key)}">Stop capturing</button>${r.launchedByUs ? `<button class="iconbtn" data-close="${esc(r.key)}" style="color:var(--err)">Close browser</button>` : ''}</div>`).join('')
+        : '';
+    } catch {}
+    this.brT = setTimeout(() => this.browsers(), 2000);
+  },
+  async browserAction(url, body, busy) {
+    this.stat('#brStat', '', busy);
+    try {
+      const r = await (await fetch(url, { method: 'POST', body: JSON.stringify(body) })).json();
+      this.stat('#brStat', r.ok === false ? 'err' : 'ok', r.ok === false ? r.message : r.name ? `Capturing ${r.name}` : 'Done');
+      if (r.ok !== false && r.name) toast(`Capturing ${r.name}`);
+      this.browsers();
+      return r.ok !== false;
+    } catch {
+      this.stat('#brStat', 'err', 'Request failed');
+      this.browsers();
+      return false;
+    }
+  },
+  stat(id, cls, text) {
+    const el = $(id);
+    el.style.display = '';
+    el.className = `pstat ${cls}`;
+    el.querySelector('span').textContent = text;
+  },
+  async startQr() {
+    $('#qrBox').innerHTML = '<span class="note">Generating…</span>';
+    this.stat('#qrStat', 'idle', 'Preparing…');
+    try {
+      const r = await (await fetch('/pair/qr/start', { method: 'POST' })).json();
+      $('#qrBox').innerHTML = r.svg || `<span class="note">QR unavailable — use Pairing code</span>`;
+      this.pollQr();
+    } catch {
+      this.stat('#qrStat', 'err', 'Could not start pairing');
+    }
+  },
+  async pollQr() {
+    clearTimeout(this.pollT);
+    if (!this.el.classList.contains('open') || this.tab !== 'qr') return;
+    let st;
+    try { st = await (await fetch('/pair/status')).json(); } catch { return; }
+    const cls = st.state === 'connected' ? 'ok' : st.state === 'error' ? 'err' : '';
+    this.stat('#qrStat', cls, st.message || st.state);
+    if (st.state === 'connected') { toast('Device connected'); return; }
+    if (st.state === 'error') return;
+    this.pollT = setTimeout(() => this.pollQr(), 1000);
+  },
+  async code() {
+    const btn = $('#pcGo');
+    btn.disabled = true;
+    this.stat('#pcStat', '', 'Pairing…');
+    try {
+      const r = await (await fetch('/pair/code', {
+        method: 'POST',
+        body: JSON.stringify({ target: $('#pcTarget').value, code: $('#pcCode').value, connect: $('#pcConnect').value }),
+      })).json();
+      this.stat('#pcStat', r.ok ? 'ok' : 'err', r.message);
+      if (r.ok) toast('Device connected');
+    } catch {
+      this.stat('#pcStat', 'err', 'Request failed');
+    }
+    btn.disabled = false;
+  },
+  async nearby() {
+    clearTimeout(this.nbT);
+    if (!this.el.classList.contains('open') || this.tab !== 'nearby') return;
+    try {
+      const { services } = await (await fetch('/nearby')).json();
+      $('#nbList').innerHTML = services.length
+        ? services.map((s) => `<div class="nb"><span class="av" style="width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--surface);color:var(--text-2)">${ICONS.phone}</span>
+            <span class="tx"><b>${esc(s.name)}</b><small>${esc(s.host)}:${s.port}</small></span>
+            ${s.connected ? '<span class="ok">Connected</span>' : `<button class="btn" data-connect="${esc(s.host)}:${s.port}">Connect</button>`}</div>`).join('')
+        : '<div class="note">No devices advertising on this network. Turn on Wireless debugging on the phone, or pair it first.</div>';
+    } catch {}
+    this.nbT = setTimeout(() => this.nearby(), 3000);
+  },
+  async connect(target, statId) {
+    this.stat(statId, '', `Connecting to ${target}…`);
+    try {
+      const r = await (await fetch('/connect', { method: 'POST', body: JSON.stringify({ target }) })).json();
+      this.stat(statId, r.ok ? 'ok' : 'err', r.message);
+      if (r.ok) { toast('Device connected'); this.nearby(); }
+    } catch {
+      this.stat(statId, 'err', 'Request failed');
+    }
+  },
+};
+$('#pairBtn').addEventListener('click', () => Pair.open());
+$('#conn').addEventListener('click', () => Pair.open('nearby'));
+$('#pairClose').addEventListener('click', () => Pair.close());
+$('#pairModal').addEventListener('pointerdown', (ev) => { if (ev.target === ev.currentTarget) Pair.close(); });
+$('#pairTabs').addEventListener('click', (ev) => { const t = ev.target.closest('.tab'); if (t) Pair.show(t.dataset.p); });
+$('#qrNew').addEventListener('click', () => Pair.startQr());
+$('#pcGo').addEventListener('click', () => Pair.code());
+$('#pcCode').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') Pair.code(); });
+$('#nbList').addEventListener('click', (ev) => { const b = ev.target.closest('[data-connect]'); if (b) Pair.connect(b.dataset.connect, '#nbStat'); });
+$('#nbGo').addEventListener('click', () => Pair.connect($('#nbTarget').value.trim(), '#nbStat'));
+$('#nbTarget').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') Pair.connect($('#nbTarget').value.trim(), '#nbStat'); });
+$('#pairModal').addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); Pair.close(); } });
+$('#devMenu').addEventListener('click', (ev) => {
+  if (ev.target.closest('[data-pair]')) { $('#devDD').classList.remove('open'); Pair.open(); }
+  if (ev.target.closest('[data-pair-browser]')) { $('#devDD').classList.remove('open'); Pair.open('browser'); }
+});
+$('#brList').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-launch]');
+  if (!b) return;
+  document.querySelectorAll('#brInject .need').forEach((x) => x.classList.remove('need'));
+  const pre = $('#brPreset').value;
+  const need = (ids, msg) => {
+    const empty = ids.map((id) => $('#' + id)).filter((x) => !x.value.trim());
+    if (empty.length < ids.length) return false;
+    empty.forEach((x) => x.classList.add('need'));
+    empty[0].focus();
+    Pair.stat('#brStat', 'err', msg);
+    return true;
+  };
+  if (pre !== 'none') {
+    if (need(['brToken'], 'Paste a token, or use “From a captured call”')) return;
+    if (pre === 'storage' && need(['brCookie', 'brKey'], 'This site isn’t set up yet: enter where it keeps its token (cookie name and/or localStorage key — the grey text is only an example), or sign in once in Netscope’s browser and click “Detect from a signed-in tab”. You only do this once per site.')) return;
+    if (pre === 'header' && need(['brHeader'], 'Enter the header name')) return;
+  }
+  const inject = brInjection();
+  if (inject && !$('#brUrl').value.trim()) { Pair.stat('#brStat', 'err', 'Enter the address to open — the token is set for that site'); return; }
+  brRemember();
+  Pair.browserAction('/browser/launch', { id: b.dataset.launch, url: $('#brUrl').value.trim(), inject }, inject ? 'Starting the browser and signing in…' : 'Starting the browser…')
+    .then((ok) => { if (ok && inject) brSaveRecipe(); });
+});
+
+// ----- sign-in injection form -----
+function brInjection() {
+  const preset = $('#brPreset').value;
+  const token = $('#brToken').value.trim();
+  if (preset === 'none' || !token) return null;
+  // Resolve {{header:name}} in the extra values from the captured call picked with "From a captured call".
+  const picked = S.brPicked;
+  const unresolved = new Set();
+  const extras = $('#brExtra').value.split('\n').map((l) => {
+    const i = l.indexOf('=');
+    if (i < 1) return null;
+    const key = l.slice(0, i).trim();
+    const claims = jwtClaims(token);
+    const value = l.slice(i + 1).trim()
+      .replace(/\{\{\s*header:([\w-]+)\s*\}\}/gi, (all, h) => {
+        const v = picked && (picked.reqHeaders || []).find(([k]) => k.toLowerCase() === h.toLowerCase())?.[1];
+        if (v == null) unresolved.add(`header:${h}`);
+        return v ?? '';
+      })
+      .replace(/\{\{\s*jwt:([\w.-]+)\s*\}\}/gi, (all, path) => {
+        const v = path.split('.').reduce((o, k) => (o == null ? o : o[k]), claims);
+        if (v == null) unresolved.add(`jwt:${path}`);
+        return v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
+      });
+    return key ? [key, value] : null;
+  }).filter(Boolean);
+  if (unresolved.size) toast(`No value for: ${[...unresolved].join(', ')}`);
+  return {
+    preset, token,
+    cookieName: $('#brCookie').value.trim(), storageKey: $('#brKey').value.trim(),
+    extras, alsoSession: $('#brSession').checked,
+    headerName: $('#brHeader').value.trim(), headerHost: $('#brHost').value.trim(),
+  };
+}
+// Decode a JWT's payload (no verification — just to read its claims).
+function jwtClaims(token) {
+  const part = String(token || '').replace(/^bearer\s+/i, '').split('.')[1];
+  if (!part) return null;
+  try {
+    const json = atob(part.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(part.length / 4) * 4, '='));
+    return JSON.parse(decodeURIComponent([...json].map((c) => `%${c.charCodeAt(0).toString(16).padStart(2, '0')}`).join('')));
+  } catch { return null; }
+}
+function brShowClaims() {
+  const el = $('#brClaims');
+  const c = jwtClaims($('#brToken').value);
+  if (!c) { el.style.display = 'none'; return; }
+  const bits = [];
+  if (c.exp) {
+    const left = c.exp * 1000 - Date.now();
+    bits.push(left <= 0 ? '<b style="color:var(--err)">expired</b>' : `expires in <b>${left > 36e5 ? `${Math.round(left / 36e5)} h` : `${Math.max(1, Math.round(left / 6e4))} min`}</b>`);
+  }
+  const shown = Object.entries(c).filter(([k, v]) => !['exp', 'iat', 'nbf', 'jti'].includes(k) && (typeof v !== 'object' || v === null)).slice(0, 8);
+  el.innerHTML = `Token ${bits.join(' · ')}${bits.length ? ' · ' : ''}claims: ${shown.map(([k, v]) => `<code>${esc(k)}</code>=${esc(String(v).slice(0, 28))}`).join(', ') || '—'}`;
+  el.style.display = '';
+}
+$('#brToken').addEventListener('input', brShowClaims);
+function brShowPreset() {
+  const p = $('#brPreset').value;
+  $('#brInject').style.display = p === 'none' ? 'none' : '';
+  document.querySelectorAll('#brInject .bri').forEach((el) => { el.hidden = !el.dataset.for.split(' ').includes(p); });
+  if (!$('#brHost').value && (p === 'bearer' || p === 'header')) {
+    try { $('#brHost').value = new URL($('#brUrl').value.trim()).host; } catch {}
+  }
+}
+// Remembered between launches: address, preset and codes — never the token.
+const BR_KEYS = { brUrl: 'br.url', brPreset: 'br.preset', brHost: 'br.host', brCookie: 'br.cookie', brKey: 'br.key', brHeader: 'br.header', brExtra: 'br.extra' };
+// Per-site sign-in settings ("recipes"): where a site keeps its token. Saved after a successful
+// launch or Detect, filled in automatically whenever the address is on that site. Never the token.
+const RECIPE_FIELDS = ['brPreset', 'brCookie', 'brKey', 'brExtra', 'brHeader', 'brHost'];
+function brOrigin() { try { return new URL($('#brUrl').value.trim()).origin; } catch { return null; } }
+function brRecipes() { try { return JSON.parse(store.get('br.recipes') || '{}'); } catch { return {}; } }
+function brSaveRecipe() {
+  const o = brOrigin();
+  if (!o || $('#brPreset').value === 'none') return;
+  const all = brRecipes();
+  all[o] = Object.fromEntries(RECIPE_FIELDS.map((id) => [id, $('#' + id).value]));
+  all[o].brSession = $('#brSession').checked;
+  store.set('br.recipes', JSON.stringify(all));
+  brApplyRecipe(true);
+}
+function brApplyRecipe(collapse) {
+  const o = brOrigin();
+  const r = o && brRecipes()[o];
+  const sum = $('#brRecipeSum');
+  const box = $('#brRecipeBox');
+  if (!r) { sum.style.display = 'none'; box.style.display = ''; return false; }
+  for (const id of RECIPE_FIELDS) if (r[id] != null) $('#' + id).value = r[id];
+  $('#brSession').checked = !!r.brSession;
+  brShowPreset();
+  const host = new URL(o).host;
+  const where = r.brPreset === 'storage'
+    ? [r.brCookie && `cookie <code>${esc(r.brCookie)}</code>`, r.brKey && `localStorage <code>${esc(r.brKey)}</code>`, (r.brExtra || '').trim() && `${r.brExtra.trim().split('\n').length} extra value(s)`].filter(Boolean).join(' · ')
+    : `${r.brPreset === 'bearer' ? 'Authorization' : `<code>${esc(r.brHeader)}</code>`} header on <code>${esc(r.brHost)}</code>`;
+  sum.innerHTML = `✓ Sign-in settings for <b>${esc(host)}</b> are saved — ${where}. Just add the token and Launch. <a href="#" id="brRecipeEdit">Change</a> · <a href="#" id="brRecipeForget">Forget</a>`;
+  sum.style.display = '';
+  box.style.display = collapse === false ? '' : 'none';
+  $('#brRecipeEdit').onclick = (ev) => { ev.preventDefault(); box.style.display = box.style.display === 'none' ? '' : 'none'; };
+  $('#brRecipeForget').onclick = (ev) => {
+    ev.preventDefault();
+    const all = brRecipes();
+    delete all[o];
+    store.set('br.recipes', JSON.stringify(all));
+    sum.style.display = 'none';
+    box.style.display = '';
+  };
+  return true;
+}
+$('#brUrl').addEventListener('input', () => brApplyRecipe());
+$('#brUrl').addEventListener('change', () => brApplyRecipe());
+function brRemember() {
+  for (const [id, k] of Object.entries(BR_KEYS)) store.set(k, $('#' + id).value);
+  store.set('br.session', $('#brSession').checked ? '1' : '');
+}
+for (const [id, k] of Object.entries(BR_KEYS)) { const v = store.get(k); if (v != null) $('#' + id).value = v; }
+$('#brSession').checked = store.get('br.session') === '1';
+if (!['none', 'storage', 'bearer', 'header'].includes($('#brPreset').value)) $('#brPreset').value = 'none';
+brShowPreset();
+brApplyRecipe();
+$('#brPreset').addEventListener('change', brShowPreset);
+document.querySelectorAll('#brInject input, #brInject textarea').forEach((x) => x.addEventListener('input', () => x.classList.remove('need')));
+$('#brDetect').addEventListener('click', async () => {
+  const url = $('#brUrl').value.trim();
+  if (!url) { Pair.stat('#brStat', 'err', 'Enter the site address first'); $('#brUrl').focus(); return; }
+  Pair.stat('#brStat', '', 'Looking in Netscope’s browser…');
+  try {
+    const r = await (await fetch('/browser/detect', { method: 'POST', body: JSON.stringify({ url }) })).json();
+    if (!r.ok) { Pair.stat('#brStat', 'err', r.message); return; }
+    if (r.cookie) $('#brCookie').value = r.cookie;
+    if (r.storageKey) $('#brKey').value = r.storageKey;
+    if (r.extras?.length && !$('#brExtra').value.trim()) $('#brExtra').value = r.extras.map(([k, v]) => `${k} = ${v}`).join('\n');
+    if (r.token && !$('#brToken').value.trim()) { $('#brToken').value = r.token; brShowClaims(); }
+    if (r.alsoSession) $('#brSession').checked = true;
+    document.querySelectorAll('#brInject .need').forEach((x) => x.classList.remove('need'));
+    brRemember();
+    brSaveRecipe();
+    Pair.stat('#brStat', 'ok', `Found: ${[r.cookie && `cookie ${r.cookie}`, r.storageKey && `localStorage ${r.storageKey}`, r.extras?.length && `${r.extras.length} matching value(s)`].filter(Boolean).join(' · ')}`);
+  } catch {
+    Pair.stat('#brStat', 'err', 'Request failed');
+  }
+});
+$('#brTokenShow').addEventListener('click', () => {
+  const t = $('#brToken');
+  t.type = t.type === 'password' ? 'text' : 'password';
+  $('#brTokenShow').textContent = t.type === 'password' ? 'Show' : 'Hide';
+});
+$('#brFromCall').addEventListener('click', () => {
+  // Newest captured call carrying "Authorization: Bearer …" — prefer one to the site being opened
+  // or to the "only for" host.
+  const hosts = new Set();
+  try { hosts.add(new URL($('#brUrl').value.trim()).host); } catch {}
+  if ($('#brHost').value.trim()) hosts.add($('#brHost').value.trim().toLowerCase());
+  const hdr = (e, n) => (e.reqHeaders || []).find(([k]) => k.toLowerCase() === n)?.[1];
+  const withToken = [...S.byId.values()].filter((e) => /^bearer\s+\S+/i.test(hdr(e, 'authorization') || '')).sort((a, b) => b.id - a.id);
+  const pick = withToken.find((e) => { try { return hosts.has(new URL(e.url).host); } catch { return false; } }) || withToken[0];
+  if (!pick) { toast('No captured call has a Bearer token yet — use the app first, or paste a token'); return; }
+  S.brPicked = pick;
+  $('#brToken').value = hdr(pick, 'authorization').replace(/^bearer\s+/i, '');
+  brShowClaims();
+  let where = '';
+  try { const u = new URL(pick.url); where = `${u.host}${u.pathname}`; } catch {}
+  if (($('#brPreset').value === 'bearer' || $('#brPreset').value === 'header') && !$('#brHost').value) { try { $('#brHost').value = new URL(pick.url).host; } catch {} }
+  const el = $('#brPicked');
+  el.style.display = '';
+  el.textContent = `Using ${pick.method} ${where} · ${devName(pick.device)} — its headers can fill {{header:…}} values`;
+  toast('Token taken from a captured call');
+});
+$('#brRunning').addEventListener('click', (ev) => {
+  const st = ev.target.closest('[data-stop]');
+  const cl = ev.target.closest('[data-close]');
+  if (st) Pair.browserAction('/browser/stop', { key: st.dataset.stop }, 'Stopping…');
+  if (cl) Pair.browserAction('/browser/stop', { key: cl.dataset.close, close: true }, 'Closing…');
+});
+$('#brAttach').addEventListener('click', () => Pair.browserAction('/browser/attach', { port: $('#brPort').value.trim() }, 'Attaching…'));
+$('#brPort').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') $('#brAttach').click(); });
+
+// ---------- detail pane ----------
+function tryJson(s) { if (!s) return undefined; try { return JSON.parse(s); } catch { return undefined; } }
+
+function jsonNode(key, v, depth) {
+  const k = key == null ? '' : `<span class="jk">${esc(key)}</span>: `;
+  if (v === null) return `<div class="row">${k}<span class="jz">null</span></div>`;
+  if (typeof v === 'string') return `<div class="row">${k}<span class="js">"${esc(v)}"</span></div>`;
+  if (typeof v === 'number') return `<div class="row">${k}<span class="jn">${v}</span></div>`;
+  if (typeof v === 'boolean') return `<div class="row">${k}<span class="jb">${v}</span></div>`;
+  const isArr = Array.isArray(v);
+  const keys = isArr ? v : Object.keys(v);
+  const n = keys.length;
+  const sum = isArr ? `Array(${n})` : `{…} ${n} key${n === 1 ? '' : 's'}`;
+  if (!n) return `<div class="row">${k}<span class="sum">${isArr ? '[]' : '{}'}</span></div>`;
+  const LIMIT = 300;
+  let inner = '';
+  if (isArr) {
+    v.slice(0, LIMIT).forEach((item, i) => { inner += jsonNode(i, item, depth + 1); });
+    if (n > LIMIT) inner += `<div class="row sum">… ${n - LIMIT} more</div>`;
+  } else {
+    for (const kk of keys) inner += jsonNode(kk, v[kk], depth + 1);
+  }
+  return `<details ${depth < 2 ? 'open' : ''}><summary>${k}<span class="sum">${sum}</span></summary>${inner}</details>`;
+}
+
+function maskAuth(k, v) {
+  if (!/^authorization$/i.test(k) || S.revealed) return esc(v);
+  const m = v.match(/^(\S+\s+)(.{8}).*(.{6})$/);
+  return m ? `<span class="reveal" data-reveal title="Click to show">${esc(m[1] + m[2])}…${esc(m[3])}</span>` : esc(v);
+}
+function kv(pairs) {
+  if (!pairs.length) return '<div class="note">None</div>';
+  return `<div class="kv">${pairs.map(([k, v]) => `<div class="k">${esc(k)}</div><div class="v">${maskAuth(k, v)}</div>`).join('')}</div>`;
+}
+function sec(title, body, count) {
+  return `<div class="sec"><h3>${esc(title)}${count != null ? `<span class="n">${count}</span>` : ''}</h3><div class="body">${body}</div></div>`;
+}
+function bodyView(text, note, truncated, tree) {
+  const warn = truncated ? `<div class="banner warn">⚠ ${esc(note)}</div>` : '';
+  if (!text) return warn + (truncated ? '' : `<div class="note">${esc(note || 'No body')}</div>`);
+  const j = tryJson(text);
+  if (tree && j !== undefined && typeof j === 'object') return warn + `<div class="code jt">${jsonNode(null, j, 0)}</div>`;
+  return warn + `<div class="code"><pre>${esc(j !== undefined ? JSON.stringify(j, null, 2) : text)}</pre></div>`;
+}
+
+function renderDetail() {
+  const e = S.byId.get(S.sel);
+  $('#detail').classList.toggle('open', !!e);
+  $('#split').classList.toggle('open', !!e);
+  if (!e) return;
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.tab === S.tab));
+
+  const u = parseUrl(e.url);
+  $('#dStatus').innerHTML = statusPill(e);
+  $('#dMethod').className = `method m-${e.method}`;
+  $('#dMethod').textContent = e.method;
+  $('#dPath').innerHTML = pathHtml(e);
+  $('#dPath').title = e.url;
+  const meta = [];
+  if (u) meta.push(`<span>${esc(u.host)}</span>`);
+  if (e.durationMs != null) meta.push(`<span>Time <b>${fmtTime(e.durationMs)}</b></span>`);
+  if (e.size != null) meta.push(`<span>Size <b>${fmtSize(e.size)}</b>${e.transferSize != null && e.transferSize !== e.size ? ` · ${fmtSize(e.transferSize)} over the wire` : ''}</span>`);
+  meta.push(`<span><span class="sw" style="background:${devColor(e.device)}"></span><b>${esc(devName(e.device))}</b></span>`);
+  if (e.app) meta.push(`<span><b>${esc(e.app)}</b></span>`);
+  if (e.source === 'chrome') meta.push(`<span>via Chrome DevTools${e.resourceType ? ` · <b>${esc(e.resourceType)}</b>` : ''}</span>`);
+  meta.push(`<span>${esc(e.started)}</span>`);
+  $('#dMeta').innerHTML = meta.join('');
+
+  const pane = $('#pane');
+  const scroll = pane.scrollTop;
+  let html = '';
+  const waiting = e.status == null && e.state !== 'failed';
+  if (e.error) html += `<div class="banner err">${esc(e.error)}</div>`;
+  if (S.tab === 'headers') {
+    html += sec('General', kv([
+      ['Request URL', e.url],
+      ['Method', e.method],
+      ['Status', e.state === 'failed' ? 'Failed' : waiting ? 'Pending…' : `${e.status} ${e.statusText}`.trim()],
+      ['Device', `${devName(e.device)} (${e.device})`],
+    ]));
+    html += sec('Response headers', waiting ? '<div class="note">Not received yet</div>' : kv(e.respHeaders), e.respHeaders.length || null);
+    html += sec('Request headers', kv(e.reqHeaders), e.reqHeaders.length || null);
+  } else if (S.tab === 'payload') {
+    const qs = u ? [...u.searchParams.entries()] : [];
+    if (qs.length) html += sec('Query parameters', kv(qs), qs.length);
+    html += sec('Request body', bodyView(e.reqBody, e.reqNote || 'No body', false, true));
+  } else if (S.tab === 'preview') {
+    if (!e.error) html += bodyView(e.respBody, e.respNote || (waiting ? 'Waiting for response…' : 'No body'), e.truncated, true);
+  } else if (S.tab === 'raw' && e.source === 'chrome') {
+    html = '<div class="note">Captured from Chrome over the DevTools protocol — Chrome doesn’t write network traffic to logcat, so there are no raw log lines for this call.</div>';
+  } else if (S.tab === 'raw') {
+    loadEntryRaw(e.id);
+    html = entryRawHtml ?? '<div class="note">Loading…</div>';
+  } else if (!e.error) {
+    html += bodyView(e.respBody, e.respNote || (waiting ? 'Waiting for response…' : 'No body'), e.truncated, false);
+  }
+  pane.innerHTML = html;
+  updateDetailActions();
+  pane.scrollTop = scroll;
+}
+
+function select(id) {
+  S.sel = id;
+  document.querySelectorAll('#rows tr').forEach((tr) => tr.classList.toggle('sel', Number(tr.dataset.id) === id));
+  $('#pane').scrollTop = 0;
+  renderDetail();
+}
+
+// ---------- actions ----------
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast');
+  t.querySelector('span').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1500);
+}
+async function copy(text, label) {
+  try { await navigator.clipboard.writeText(text); toast(`${label} copied`); } catch { toast('Copy failed'); }
+}
+const sq = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
+function curlOf(e) {
+  const parts = [`curl -X ${e.method} ${sq(e.url)}`];
+  for (const [k, v] of e.reqHeaders) if (!/^content-length$/i.test(k)) parts.push(`-H ${sq(`${k}: ${v}`)}`);
+  if (e.reqBody) parts.push(`--data-raw ${sq(e.reqBody)}`);
+  return parts.join(' \\\n  ');
+}
+
+$('#rows').addEventListener('click', (ev) => { const tr = ev.target.closest('tr[data-id]'); if (tr) select(Number(tr.dataset.id)); });
+document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => { S.tab = t.dataset.tab; $('#pane').scrollTop = 0; renderDetail(); }));
+$('#pane').addEventListener('click', (ev) => { if (ev.target.closest('[data-reveal]')) { S.revealed = true; renderDetail(); } });
+$('#close').addEventListener('click', () => select(null));
+$('#curl').addEventListener('click', () => { const e = S.byId.get(S.sel); if (e) copy(curlOf(e), 'cURL'); });
+$('#copyResp').addEventListener('click', () => {
+  const e = S.byId.get(S.sel); if (!e) return;
+  const j = tryJson(e.respBody);
+  copy(j !== undefined ? JSON.stringify(j, null, 2) : e.respBody, 'Response');
+});
+$('#filter').addEventListener('input', (ev) => {
+  S.filter = ev.target.value.trim();
+  S.q = parseQuery(S.filter);
+  ev.target.classList.toggle('bad', S.view === 'requests' && S.q.bad);
+  ev.target.title = S.q.bad ? 'Some filters were not understood' : '';
+  renderList();
+  if (S.view === 'raw') Raw.render();
+  Sug.update();
+});
+$('#rec').addEventListener('click', () => {
+  S.paused = !S.paused;
+  $('#rec').classList.toggle('paused', S.paused);
+  $('#rec').title = S.paused ? 'Resume recording' : 'Pause recording';
+  toast(S.paused ? 'Recording paused' : 'Recording resumed');
+});
+function clearAll() { fetch('/clear', { method: 'POST' }); }
+$('#clear').addEventListener('click', clearAll);
+document.addEventListener('keydown', (ev) => {
+  if ($('#pairModal').classList.contains('open')) { if (ev.key === 'Escape') Pair.close(); return; }
+  if (anyModalOpen()) return;
+  if (S.view === 'client') return;
+  if ((ev.metaKey || ev.ctrlKey) && ev.key === 'k') { ev.preventDefault(); clearAll(); return; }
+  if (ev.target === $('#filter')) { if (ev.key === 'Escape') ev.target.blur(); return; }
+  if (['#devDD', '#routeDD', '#appDD'].some((q) => $(q).contains(ev.target))) return;
+  if (ev.key === '/') { ev.preventDefault(); $('#filter').focus(); return; }
+  if (ev.key === 'Escape') select(null);
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+    const ids = (S.shown || []).map((e) => e.id);
+    if (!ids.length) return;
+    ev.preventDefault();
+    let i = ids.indexOf(S.sel);
+    i = i < 0 ? (ev.key === 'ArrowDown' ? 0 : ids.length - 1) : Math.max(0, Math.min(ids.length - 1, i + (ev.key === 'ArrowDown' ? 1 : -1)));
+    S.scrollToEntry(ids[i]);
+    select(ids[i]);
+  }
+});
+
+// ---------- resizable split ----------
+(() => {
+  const split = $('#split');
+  const detail = $('#detail');
+  const main = document.querySelector('main');
+  const KEY = 'detailWidthPct';
+  const clamp = (pct) => Math.max(22, Math.min(78, pct));
+  const apply = (pct) => { detail.style.width = pct + '%'; };
+  const saved = Number(store.get(KEY));
+  if (saved) apply(clamp(saved));
+  let dragging = false;
+  split.addEventListener('pointerdown', (ev) => {
+    if (ev.button !== 0) return;
+    ev.preventDefault();
+    dragging = true;
+    try { split.setPointerCapture(ev.pointerId); } catch {}
+    split.classList.add('drag');
+    document.body.classList.add('resizing');
+  });
+  const end = () => {
+    if (!dragging) return;
+    dragging = false;
+    split.classList.remove('drag');
+    document.body.classList.remove('resizing');
+    store.set(KEY, parseFloat(detail.style.width));
+  };
+  // Track on the window, not the splitter: a release can land where the splitter never hears it
+  // (e.g. over the title-bar drag region, which macOS swallows), and the drag must still end.
+  window.addEventListener('pointermove', (ev) => {
+    if (!dragging) return;
+    if (ev.buttons === 0) { end(); return; } // button was released somewhere we didn't see
+    const r = main.getBoundingClientRect();
+    apply(clamp(((r.right - ev.clientX) / r.width) * 100));
+  });
+  window.addEventListener('pointerup', end);
+  window.addEventListener('pointercancel', end);
+  window.addEventListener('blur', end);
+  split.addEventListener('lostpointercapture', end);
+  split.addEventListener('dblclick', () => { apply(50); store.del(KEY); });
+})();
+
+// ---------- live feed ----------
+function upsert(e) {
+  if (e.app) Raw.pidApp.set(`${e.device}:${e.pid}`, e.app);
+  if (!S.byId.has(e.id)) {
+    if (S.paused) return;
+    S.order.push(e.id);
+  }
+  S.byId.set(e.id, e);
+}
+function connect() {
+  const es = new EventSource('/events');
+  es.addEventListener('snapshot', (ev) => {
+    S.byId.clear(); S.order = [];
+    JSON.parse(ev.data).forEach(upsert);
+    renderList(); renderDetail();
+  });
+  es.addEventListener('entry', (ev) => {
+    const e = JSON.parse(ev.data);
+    upsert(e);
+    schedule();
+    if (e.id === S.sel) renderDetail();
+  });
+  es.addEventListener('clear', () => { S.byId.clear(); S.order = []; S.sel = null; entryRawFor = null; renderList(); renderDetail(); });
+  es.addEventListener('devices', (ev) => {
+    const { adb, devices, names } = JSON.parse(ev.data);
+    S.adb = adb;
+    S.names = names || {};
+    S.devices = new Map(devices.map((d) => [d.serial, d]));
+    renderDevices();
+    schedule();
+  });
+  es.onerror = () => {
+    const c = $('#conn');
+    c.className = 'conn bad';
+    c.querySelector('span').textContent = 'Inspector offline';
+  };
+}
+renderList();
+renderApps();
+initFeatures();
+initClient().then(() => { if (S.view === 'client') renderEditor(); });
+$('#toClientBtn').addEventListener('click', () => { const e = S.byId.get(S.sel); if (e) openInClient(e); });
+// Keep the Path column readable: drop the least important columns as the list narrows
+// (e.g. when the details panel is open). Widths are what the fixed columns need plus ~260px of path.
+(() => {
+  const table = $('#table');
+  // Columns drop in this order until the fixed ones leave >= ~250px for Path.
+  const DROP = [['hide-wf', 170, '.c-wf'], ['hide-at', 124, '.c-at'], ['hide-ty', 92, '.c-ty'], ['squeeze-app', 180, '.c-a'], ['hide-sz', 96, '.c-s'], ['squeeze-dev', 170, '.c-d']];
+  const fit = () => {
+    const w = $('#list').clientWidth || $('#listCard').clientWidth;
+    const on = (cls) => !table.classList.contains(cls);
+    // Width of every column that could be showing (Device/App only when they apply).
+    let need = 88 + 100 + 88 + 250 + 170 + 124 + 92 + 96 + (on('hide-dev') ? 170 : 0) + (on('hide-app') ? 180 : 0);
+    for (const [cls, width, sel] of DROP) {
+      const applies = sel === '.c-a' ? on('hide-app') : sel === '.c-d' ? on('hide-dev') : true;
+      const drop = applies && need > w;
+      table.classList.toggle(cls, drop);
+      if (drop) need -= width;
+    }
+  };
+  new ResizeObserver(() => { fit(); if (S.shown?.length > 400) renderRows(); }).observe($('#listCard'));
+  S.fitColumns = fit;
+})();
+connect();
+setView(S.view);
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+# JitPack builds the Android library from android/ when a tag is pushed:
+#   implementation("com.github.chinthalarohitho-alt:netscope:<tag>")
+jdk:
+  - openjdk17
+install:
+  - cd android && ./gradlew :netscope:publishReleasePublicationToMavenLocal
