@@ -9,11 +9,11 @@
   "main": "main.js",
   "private": true,
   "scripts": {
-    "start": "electron .",
+    "start": "node api.js && electron .",
     "serve": "node server.js",
     "test": "node --test test/*.test.js",
     "site": "node site/build.js",
-    "dist": "electron-builder --mac dmg --arm64"
+    "dist": "electron-builder --mac dmg --arm64 --publish never"
   },
   "build": {
     "appId": "io.github.chinthalarohitho-alt.netscope",
