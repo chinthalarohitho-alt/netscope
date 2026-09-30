@@ -11,7 +11,7 @@
   "scripts": {
     "start": "electron .",
     "serve": "node server.js",
-    "test": "node --test test/",
+    "test": "node --test test/*.test.js",
     "site": "node site/build.js",
     "dist": "electron-builder --mac dmg --arm64"
   },
